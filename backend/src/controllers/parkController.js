@@ -22,7 +22,7 @@ export const getAllParks = async (req, res) => {
             ORDER BY id
         `;
         const features = result.map(rowToFeature);
-        res.status(200).json({ type: "FeatureCollection", features });
+        res.status(200).json({ type: "FeatureCollection", features, result });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch parks" });

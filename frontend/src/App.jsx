@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {Route, Routes} from "react-router"
 import HomePage from './pages/HomePage'
-import {AccessibilityProvider} from './Contexts/AccessibilityContext'
+import {AccessibilityProvider} from './context/AccessibilityContext'
 import AccessibilityToggle from './components/AccessibilityToggle'
 
 function App() {

@@ -5,14 +5,14 @@ import parkRoutes from "./routes/parkRoutes.js"
 import authRoutes from "./routes/authRoutes.js"
 import cors from "cors"
 
-dotenv.config()
-const app = express()
+dotenv.config();
+const app = express();
 
-if (process.env.NODE_ENV !== "production"){
+if (process.env.NODE_ENV !== "production") {
     app.use(cors({
         origin: "http://localhost:5173",
         credentials: true
-    }))
+    }));
 }
 
 app.use("/api/parks", parkRoutes)

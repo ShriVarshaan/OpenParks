@@ -1,0 +1,11 @@
+.high-contrast-mode {
+    --bg-cream: #000000;
+    --text-dark: #ffff00;
+    --text-mid: #ffffff;
+    --park-green: #0000ff;
+    --park-light: #3333ff;
+    --park-pale: #444444;
+    --accent-amber: #ffaa00;
+    --panel-bg: #222222;
+    --shadow: 0 0 0 2px #ffff00;
+}

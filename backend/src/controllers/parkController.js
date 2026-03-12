@@ -22,7 +22,7 @@ export const getAllParks = async (req, res) => {
             ORDER BY id
         `;
         const features = result.map(rowToFeature);
-        res.status(200).json({ type: "FeatureCollection", features, result });
+        res.status(200).json({ type: "FeatureCollection", features });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed to fetch parks" });
@@ -39,12 +39,9 @@ export const getParkById = async (req, res) => {
                 terrain_data,
                 mobility_data,
                 maintenance_stats,
-                json_build_object(
-                    'type', 'Point',
-                    'coordinates', json_build_array(longitude, latitude)
-                ) AS geometry
+                ST_AsGeoJSON(location)::json AS geometry
             FROM public."Park"
-            WHERE id = ${parseInt(id)}
+            WHERE id = ${Number(id)}
         `;
         if (!park) {
             return res.status(404).json({ error: "Park not found" });

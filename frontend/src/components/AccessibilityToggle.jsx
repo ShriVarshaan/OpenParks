@@ -1,5 +1,5 @@
 import React from 'react';
-import {useAccessibility} from '../../context/AccessibilityContext';
+import {useAccessibility} from '../context/AccessibilityContext';
 import './AccessibilityToggle.css';
 
 const AccessibilityToggle = () => {

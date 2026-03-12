@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {Route, Routes} from "react-router"
 import HomePage from './pages/HomePage'
 import {AccessibilityProvider} from './Contexts/AccessibilityContext'
-import AccessibilityToggle from './Components/AccessibilityToggle'
+import AccessibilityToggle from './components/AccessibilityToggle'
 
 function App() {
   const [count, setCount] = useState(0)

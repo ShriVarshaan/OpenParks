@@ -1,31 +1,29 @@
-import express from "express"
-import prisma from "./config/prisma.js";
-import dotenv from "dotenv"
-import parkRoutes from "./routes/parkRoutes.js"
-import cors from "cors"
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import parkRoutes from "./routes/parkRoutes.js";
 
-dotenv.config()
-const app = express()
+dotenv.config();
+const app = express();
 
-if (process.env.NODE_ENV !== "production"){
+if (process.env.NODE_ENV !== "production") {
     app.use(cors({
         origin: "http://localhost:5173",
         credentials: true
-    }))
+    }));
 }
 
-app.use("/api/parks", parkRoutes)
+app.use(express.json());
+app.use("/api/parks", parkRoutes);
 
-app.get('/api/places', async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        id, name, category,
-        ST_AsGeoJSON(location)::json AS geometry,
-        address, created_at
-      FROM places
-      ORDER BY id
-    `;
+app.get("/", (req, res) => {
+    res.send("Server is running");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
     const result = await pool.query(query);
     const features = result.rows.map(rowToFeature);
     res.json({ type: 'FeatureCollection', features });

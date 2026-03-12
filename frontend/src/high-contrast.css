@@ -62,3 +62,53 @@
     border-color: #ffff00;
     color: #ffff00;
 }
+
+.high-contrast-mode .trail-label {
+    color: #ffff00;
+}
+
+.high-contrast-mode .trail-btn {
+    background: #222222;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+}
+
+.high-contrast-mode #map {
+    border-top: 2px solid #ffff00;
+    border-bottom: 2px solid #ffff00;
+}
+
+.high-contrast-mode .maplibregl-map {
+    filter: grayscale(100%) contrast(150%);
+}
+
+.high-contrast-mode input,
+.high-contrast-mode textarea,
+.high-contrast-mode select {
+    background: #222222;
+    color: #ffff00;
+    border: 2px solid #ffff00;
+    padding: 8px;
+}
+
+.high-contrast-mode input::placeholder {
+    color: #aaaaaa;
+}
+
+.high-contrast-mode button {
+    background: #0000ff;
+    color: #ffff00;
+    border: 2px solid #ffff00;
+    font-weight: bold;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.high-contrast-mode button:hover {
+    background: #ffff00;
+    color: #0000ff;
+}
+
+.high-contrast-mode * {
+    border-color: #ffff00;
+}

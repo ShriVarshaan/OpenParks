@@ -2,6 +2,7 @@ import express from "express"
 import prisma from "./config/prisma.js";
 import dotenv from "dotenv"
 import parkRoutes from "./routes/parkRoutes.js"
+import authRoutes from "./routes/authRoutes.js"
 import cors from "cors"
 
 dotenv.config()
@@ -15,6 +16,7 @@ if (process.env.NODE_ENV !== "production"){
 }
 
 app.use("/api/parks", parkRoutes)
+app.use("/api/auth", authRoutes)
 
 app.get('/api/places', async (req, res) => {
   try {

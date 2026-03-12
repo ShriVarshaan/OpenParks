@@ -1,70 +1,78 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  output          = "../src/generated"
   previewFeatures = ["postgresqlExtensions"]
-  output   = "../src/generated"
 }
 
 datasource db {
-  provider = "postgresql"
-  extensions = [postgis]
+  provider   = "postgresql"
+  extensions = [postgis, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  username String @db.VarChar
-  email String @unique @db.VarChar
-  password String @db.VarChar
+  id            Int            @id @default(autoincrement())
+  username      String         @db.VarChar
+  email         String         @unique @db.VarChar
+  password      String         @db.VarChar
+  reviews       Review[]
   safetyReports SafetyReport[]
-  reviews Review[]
 }
 
 model Park {
-  id Int @id @default(autoincrement())
-  name String @db.VarChar
-  terrain_data String? @db.VarChar
-  mobility_data String? @db.VarChar
-  maintenance_stats String? @db.VarChar
-  location Unsupported("geography(Point, 4326)")
-
-  amenities ParkAmenity[]
-  safetyReports SafetyReport[]
-  reviews Review[]
+  id                Int                      @id @default(autoincrement())
+  name              String                   @db.VarChar
+  terrain_data      String?                  @db.VarChar
+  mobility_data     String?                  @db.VarChar
+  maintenance_stats String?                  @db.VarChar
+  location          Unsupported("geography")
+  amenities         ParkAmenity[]
+  reviews           Review[]
+  safetyReports     SafetyReport[]
 }
 
 model ParkAmenity {
-  id Int @id @default(autoincrement())
-  park_id Int
-  name String @db.VarChar
+  id          Int     @id @default(autoincrement())
+  park_id     Int
+  name        String  @db.VarChar
   description String? @db.VarChar
-  park Park @relation(fields: [park_id], references: [id])
+  park        Park    @relation(fields: [park_id], references: [id])
+}
+
+model SafetyReport {
+  id          Int                      @id @default(autoincrement())
+  user_id     Int
+  park_id     Int
+  description String                   @db.VarChar
+  image       Bytes?
+  status      ReportStatus             @default(OPEN)
+  created_at  DateTime                 @default(now())
+  location    Unsupported("geography")
+  park        Park                     @relation(fields: [park_id], references: [id])
+  user        User                     @relation(fields: [user_id], references: [id])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  park_id    Int
+  content    String   @db.VarChar
+  rating     Int
+  created_at DateTime @default(now())
+  park       Park     @relation(fields: [park_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
 }
 
 enum ReportStatus {
   OPEN
   RESOLVED
   PENDING
-}
-
-model SafetyReport {
-  id Int @id @default(autoincrement())
-  user_id Int
-  park_id Int
-  description String @db.VarChar
-  image Bytes?
-  status ReportStatus @default(OPEN)
-  created_at DateTime @default(now())
-  location Unsupported("geography(Point, 4236)")
-  user User @relation(fields: [user_id], references: [id])
-  park Park @relation(fields: [park_id], references: [id])
-}
-
-model Review {
-  id Int @id @default(autoincrement())
-  user_id Int
-  park_id Int
-  content String @db.VarChar
-  rating Int
-  created_at DateTime @default(now())
-  user User @relation(fields: [user_id], references: [id])
-  park Park @relation(fields: [park_id], references: [id])
 }

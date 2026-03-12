@@ -1,21 +1,20 @@
-import express from 'express';
-import pool from './db.js';
+import express from "express"
+import prisma from "./config/prisma.js";
+import dotenv from "dotenv"
+import parkRoutes from "./routes/parkRoutes.js"
+import cors from "cors"
 
-const app = express();
-app.use(express.json());
+dotenv.config()
+const app = express()
 
-const rowToFeature = (row) => ({
-  type: 'Feature',
-  geometry: row.geometry,
-  properties: {
-    id: row.id,
-    name: row.name,
-    category: row.category,
-    address: row.address,
-    created_at: row.created_at,
-    ...(row.distance && { distance: row.distance })
-  }
-});
+if (process.env.NODE_ENV !== "production"){
+    app.use(cors({
+        origin: "http://localhost:5173",
+        credentials: true
+    }))
+}
+
+app.use("/api/parks", parkRoutes)
 
 app.get('/api/places', async (req, res) => {
   try {
@@ -185,11 +184,7 @@ app.get('/api/test', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('Server is running');
-});
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(3000, () => {
+    console.log("Listening")
+})

@@ -9,3 +9,56 @@
     --panel-bg: #222222;
     --shadow: 0 0 0 2px #ffff00;
 }
+
+.high-contrast-mode body {
+    background-color: #000000;
+    color: #ffff00;
+}
+
+.high-contrast-mode #topbar {
+    background-color: #000000;
+    border-bottom: 2px solid #ffff00;
+}
+
+.high-contrast-mode nav-logo h1 {
+    color: #ffff00;
+}
+
+.high-contrast-mode nav-logo span {
+    color: #ffffff;
+}
+
+.high-contrast-mode nav-pill {
+    background: #222222;
+    border: 2px solid #ffff00;
+    color: #ffffff;
+}
+
+.high-contrast-mode nav-pill:hover, .high-contrast-mode .nav-pill.active {
+    background: #ffff00;
+    color: #000000;
+}
+
+.high-contrast-mode #filter-bar, .high-contrast-mode #trail-bar {
+    background: #222222;
+    border: 2px solid #ffff00;
+    box-shadow: none;
+}
+
+.high-contrast-mode .filter-btn {
+    background: transparent;
+    border: 2px solid transparent;
+    color: #ffffff;
+}
+
+.high-contrast-mode .filter-btn:hover {
+    background: #444444;
+    border-color: #ffff00;
+    color: #ffff00;
+}
+
+.high-contrast-mode .filter-btn.active {
+    background: #0000ff;
+    border-color: #ffff00;
+    color: #ffff00;
+}

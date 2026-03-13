@@ -1,4 +1,4 @@
-import prisma from "../config/prisma"
+import prisma from "../config/prisma.js"
 
 // For the parks details page
 export const getAllReviewsPark = async (req, res, next) => {

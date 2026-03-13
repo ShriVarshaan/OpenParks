@@ -1,4 +1,5 @@
 import express from "express"
+import {getAllReviewsPark} from "../controllers/reviewController.js"
 
 const router = express.Router()
 

@@ -1,3 +1,65 @@
+.high-contrast-mode * {
+    background-color: #000000 !important;
+    color: #ffff00 !important;
+    border-color: #ffff00 !important;
+    outline-color: #ffff00 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.high-contrast-mode button, 
+.high-contrast-mode .btn, 
+.high-contrast-mode [role="button"] {
+    border: 2px solid #ffff00 !important;
+    padding: 10px 20px !important; /* Ensure there is clickable surface area */
+    background-color: #000000 !important;
+    color: #ffff00 !important;
+    display: inline-block;
+}
+
+/* Invert colors on hover for visual feedback */
+.high-contrast-mode button:hover, 
+.high-contrast-mode .btn:hover,
+.high-contrast-mode a:hover {
+    background-color: #ffff00 !important;
+    color: #000000 !important;
+    cursor: pointer;
+}
+
+/* Ensure input fields maintain their border */
+.high-contrast-mode input {
+    border: 2px solid #ffff00 !important;
+}
+
+/* Secondary differentiation for readability */
+.high-contrast-mode p, 
+.high-contrast-mode span, 
+.high-contrast-mode li {
+    color: #ffffff !important; /* White for body text to distinguish from headers/links */
+}
+
+/* Ensure interactive elements stand out */
+.high-contrast-mode a, 
+.high-contrast-mode button {
+    text-decoration: underline !important;
+    color: #ffff00 !important;
+}
+
+/* Handle Images and Media */
+.high-contrast-mode img, 
+.high-contrast-mode video, 
+.high-contrast-mode iframe {
+    filter: grayscale(100%) contrast(120%) !important;
+    border: 2px solid #ffff00 !important;
+}
+
+/* Fix for SVG icons */
+.high-contrast-mode svg,
+.high-contrast-mode svg * {
+    fill: #ffff00 !important;
+    stroke: #ffff00 !important;
+}
+
 .high-contrast-mode {
     --bg-cream: #000000;
     --text-dark: #ffff00;
@@ -111,4 +173,17 @@
 
 .high-contrast-mode * {
     border-color: #ffff00;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh; /* Ensures the body covers the full viewport height */
+}
+
+
+.high-contrast-mode div:has(form) {
+    border: 2px solid #ffff00 !important;
+    background-color: #000000 !important;
+    display: block;
 }

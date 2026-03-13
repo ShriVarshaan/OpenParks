@@ -2,10 +2,10 @@ import { useState } from "react";
 
 export default function LoginPage({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", name: "" });
+  const [form, setForm] = useState({ email: "", password: "", username: "" });
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     // TODO: wire to Supabase auth
@@ -24,8 +24,8 @@ export default function LoginPage({ onLogin }) {
               style={styles.input}
               type="text"
               placeholder="Full name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
             />
           )}
           <input

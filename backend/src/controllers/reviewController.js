@@ -10,6 +10,25 @@ export const getAllReviewsPark = async (req, res, next) => {
     }
 }
 
+export const addReviewPark = async (req, res, next) => {
+    try{
+        const park = await prisma.park.findUnique({where: {id: req.params.id}})
+        if (!park) {
+            return res.status(404).json({message: "Park not found"})
+        }
+        const review = await prisma.review.create({
+            data: {
+                user_id: Number(req.user.id),
+                park_id: Number(req.params.id),
+                content: req.body.content,
+                rating: Number(req.body.rating)
+            }})
+        return res.status(201).json(review)
+    } catch (err){
+        return res.status(400).json(err)
+    }
+}
+
 //For the users page
 export const getAllReviewsUser = async (req, res) => {
     try{

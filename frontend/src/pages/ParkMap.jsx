@@ -1,10 +1,24 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState} from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+const TRAIL_TYPES = [
+  { label: 'Footpath',       color: '#5a9e4f' },
+  { label: 'Mud / Informal', color: '#a0724a', dashed: true },
+  { label: 'Cycleway',       color: '#e8a020' },
+  { label: 'Road',           color: '#888880' },
+  { label: 'Bridge',         color: '#4a9ebe', thick: true },
+  { label: 'Bridleway',      color: '#9b6fce', dashed: true },
+]
+
+const REPORT_CATEGORIES = [
+  'Damaged equipment', 'Litter', 'Vandalism', 'Unsafe path', 'Flooding', 'Other'
+]
 
 export default function MapRenderer() {
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
+  const [activeCategory, setActiveCategory] = useState(null)
 
   useEffect(() => {
     if (mapRef.current) return
@@ -91,6 +105,68 @@ export default function MapRenderer() {
           ))}
         </div>
       </nav>
+
+      {/* ── Report category bar ── */}
+      <div style={{
+        position: 'absolute', top: 60, left: 0, right: 0, zIndex: 90,
+        display: 'flex', justifyContent: 'center', padding: '8px 16px',
+      }}>
+        <div style={{
+          display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center',
+          background: 'rgba(245,240,232,0.97)', padding: '7px 10px',
+          borderRadius: 32, boxShadow: '0 8px 32px rgba(26,46,24,0.18)',
+          backdropFilter: 'blur(12px)',
+        }}>
+          {REPORT_CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+              style={{
+                background: activeCategory === cat ? '#2d5a27' : 'transparent',
+                border: `1.5px solid ${activeCategory === cat ? '#2d5a27' : 'transparent'}`,
+                color: activeCategory === cat ? '#fff' : '#4a6648',
+                fontSize: 12, fontWeight: 500, padding: '5px 12px',
+                borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit',
+                whiteSpace: 'nowrap', transition: 'all 0.2s',
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+        {/* ── Trail key ── */}
+      <div style={{
+        position: 'absolute', bottom: 40, left: 16, zIndex: 80,
+        background: 'rgba(245,240,232,0.97)', borderRadius: 12,
+        padding: '12px 14px', boxShadow: '0 8px 32px rgba(26,46,24,0.18)',
+        fontSize: 12, minWidth: 158,
+      }}>
+        <div style={{
+          fontWeight: 600, fontSize: 10, letterSpacing: 1.5,
+          textTransform: 'uppercase', color: '#5a9e4f', marginBottom: 8,
+        }}>
+          Trail Types
+        </div>
+
+          {TRAIL_TYPES.map(({ label, color, dashed, thick }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, color: '#4a6648' }}>
+            {dashed ? (
+              <div style={{
+                width: 22, height: 4, flexShrink: 0, borderRadius: 2,
+                background: `repeating-linear-gradient(90deg, ${color} 0 5px, transparent 5px 9px)`,
+              }} />
+            ) : thick ? (
+              <div style={{ width: 22, height: 6, borderRadius: 2, flexShrink: 0, background: color }} />
+            ) : (
+              <div style={{ width: 22, height: 4, borderRadius: 2, flexShrink: 0, background: color }} />
+            )}
+            {label}
+          </div>
+        ))}
+      </div>
+
 
       {/* Map */}
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />

@@ -7,12 +7,19 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.type || !form.description) return;
     setLoading(true);
-    // TODO: POST to Spring Boot /api/reports
-    setTimeout(() => { setLoading(false); setSubmitted(true); if (onSubmit) onSubmit(form); }, 1000);
+    
+    //Cannot connect this to the backend without park location data
+    // try{  
+
+    // } catch (err){
+
+    // }
+    //setTimeout(() => { setLoading(false); setSubmitted(true); if (onSubmit) onSubmit(form); }, 1000);
+    setLoading(false)
   };
 
   if (submitted) {

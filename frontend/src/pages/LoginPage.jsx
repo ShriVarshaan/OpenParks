@@ -1,16 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast"
+import API from "../api/axiosInstance";
+import { useNavigate } from "react-router";
 
 export default function LoginPage({ onLogin }) {
+  const navigate = useNavigate()
   const [isRegister, setIsRegister] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", username: "" });
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (token){
+      toast.error("You are already logged in")
+      navigate("/")
+      return
+    }
+  }, [])
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: wire to Supabase auth
-    setTimeout(() => { setLoading(false); if (onLogin) onLogin(form); }, 1000);
-  };
+
+    if (!isRegister){
+      try{
+        const res = await API.post("/api/auth/login", {email: form.email, password: form.password})
+        
+        
+        toast.success("Logged in successfully")
+        localStorage.setItem("token", res.data.token)
+        navigate("/")
+
+      } catch (err) {
+        toast.error("Invalid credentials")
+      }
+    }else{
+      try{
+        const res = await API.post("/api/auth/signup", {username: form.username, email: form.email, password: form.password})
+        
+        toast.success("Signed up successfully")
+        localStorage.setItem("token", res.data.token)
+        navigate("/")
+
+      } catch (err){
+        if (err.response && err.response.status === 409){
+          toast.error("User exists already, login")
+        }else{
+          console.log(err)
+          toast.error("Invalid user/email/password fields")
+        }
+      }
+    }
+    setLoading(false)
+  }
 
   return (
     <div style={styles.page}>

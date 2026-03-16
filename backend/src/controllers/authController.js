@@ -6,6 +6,7 @@ dotenv.config()
 
 export const signup = async (req, res, next) =>{
     try{
+        console.log(req.body)
         const user = await prisma.user.findUnique({where: {email: req.body.email}})
         if (user){
             return res.status(409).json({message: "User exists already"})
@@ -16,7 +17,7 @@ export const signup = async (req, res, next) =>{
             data: {
                 email: req.body.email,
                 password: hashedPassword,
-                name: req.body.name
+                username: req.body.username
             }
         })
         const token = jwt.sign(
@@ -31,6 +32,7 @@ export const signup = async (req, res, next) =>{
             user: { id: newUser.id, email: newUser.email }
         })
     } catch (err){
+        console.log(err)
         return res.status(500).json({message: "Sign up unsuccessful"})
     }
 }

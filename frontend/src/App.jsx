@@ -11,11 +11,11 @@ function App() {
 
   return (
       <div>
-        <Routes>
-          <Route path="/" element={<HomePage />}></Route>
-          <Route path="/report" element={<ReportPage />}></Route>
-          <Route path="/login" element={<LoginPage />}></Route>
-        </Routes>
+          <Routes>
+            <Route path="/" element={<HomePage />}></Route>
+            <Route path="/report" element={<ReportPage />}></Route>
+            <Route path="/login" element={<LoginPage />}></Route>
+          </Routes>
         <AccessibilityToggle />
       </div>
   )

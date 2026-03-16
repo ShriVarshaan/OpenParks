@@ -12,13 +12,12 @@ import "./config/prisma.js"
 dotenv.config();
 const app = express();
 
-if (process.env.NODE_ENV !== "production") {
-    app.use(cors({
-        origin: "http://localhost:5173",
-        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-        credentials: true
-    }));
-}
+app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true
+}))
+
+app.use(express.json())
 
 app.use("/api/parks", parkRoutes)
 app.use("/api/auth", authRoutes)

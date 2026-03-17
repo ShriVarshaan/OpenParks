@@ -89,9 +89,14 @@ export default function MapRenderer() {
           source: 'trails',
           paint: {
             'line-color': ['match', ['get', 'highway'],
-              'footway',   '#5a9e4f',
-              'cycleway',  '#e8a020',
-              'bridleway', '#9b6fce',
+              'footway',    '#5a9e4f',
+              'cycleway',   '#e8a020',
+              'bridleway',  '#9b6fce',
+              'path',       '#a0724a',
+              'track',      '#a0724a',
+              'road',       '#888880',
+              'residential','#888880',
+              'service',    '#888880',
               /* default */ '#a0724a'
             ],
             'line-width': 2

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState} from 'react'
+import {useNavigate} from "react-router"
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import API from "../api/axiosInstance.js"
 
 const TRAIL_TYPES = [
   { label: 'Footpath',       color: '#5a9e4f' },
@@ -16,6 +18,7 @@ const REPORT_CATEGORIES = [
 ]
 
 export default function MapRenderer() {
+  const navigate = useNavigate()
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
@@ -56,6 +59,47 @@ export default function MapRenderer() {
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right')
 
+    map.on('load', () => {
+      API.get('/api/parks')
+        .then(r => {
+          map.addSource('park-boundary', {
+            type: 'geojson',
+            data: r.data,
+          })
+          map.addLayer({
+            id: 'park-fill',
+            type: 'fill',
+            source: 'park-boundary',
+            paint: { 'fill-color': '#5a9e4f', 'fill-opacity': 0.15 },
+          })
+          map.addLayer({
+            id: 'park-outline',
+            type: 'line',
+            source: 'park-boundary',
+            paint: { 'line-color': '#2d5a27', 'line-width': 2.5 },
+          })
+        })
+      .catch(err => console.error(err))
+
+      API.get('/api/trails').then(r => {
+        map.addSource('trails', { type: 'geojson', data: r.data })
+        map.addLayer({
+          id: 'trails-layer',
+          type: 'line',
+          source: 'trails',
+          paint: {
+            'line-color': ['match', ['get', 'highway'],
+              'footway',   '#5a9e4f',
+              'cycleway',  '#e8a020',
+              'bridleway', '#9b6fce',
+              /* default */ '#a0724a'
+            ],
+            'line-width': 2
+          }
+        })
+      })
+    })
+
     mapRef.current = map
 
     return () => {
@@ -92,7 +136,38 @@ export default function MapRenderer() {
 
         {/* Nav buttons */}
         <div style={{ display: 'flex', gap: 8 }}>
-          {['Login', 'Review', 'Report'].map(label => (
+          <button key="Login" 
+            onClick = {() => navigate("/login")}
+            style={{
+              background: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff', fontSize: 13, fontWeight: 500,
+              padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
+              fontFamily: 'inherit',
+          }}>
+            Login
+          </button>
+          <button key="Review" style={{
+            background: 'rgba(255,255,255,0.12)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: '#fff', fontSize: 13, fontWeight: 500,
+            padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}>
+            Review
+          </button>
+          <button key="Report" 
+            onClick={() => navigate("/report")}
+            style={{
+              background: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff', fontSize: 13, fontWeight: 500,
+              padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
+              fontFamily: 'inherit',
+          }}>
+            Report
+          </button>
+          {/* {['Login', 'Review', 'Report'].map(label => (
             <button key={label} style={{
               background: 'rgba(255,255,255,0.12)',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -102,7 +177,7 @@ export default function MapRenderer() {
             }}>
               {label}
             </button>
-          ))}
+          ))} */}
         </div>
       </nav>
 

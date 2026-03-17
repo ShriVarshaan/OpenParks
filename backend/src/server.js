@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js"
 import amenityRoutes from "./routes/amenitiesRoutes.js"
 import safetyRoutes from "./routes/safetyReportRoutes.js"
 import reviewRoutes from "./routes/reviewRoutes.js"
+import trailRoutes from "./routes/trailRoutes.js"
 import cors from "cors"
 import "./config/passport.js"
 import "./config/prisma.js"
@@ -24,6 +25,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/amenities", amenityRoutes)
 app.use("/api/safetyreport", safetyRoutes)
 app.use("/api/reviews", reviewRoutes)
+app.use("/api/trails", trailRoutes)
 
 
 app.listen(3000, () => {

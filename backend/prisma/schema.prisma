@@ -21,13 +21,13 @@ model User {
 model Park {
   id                Int                      @id @default(autoincrement())
   name              String                   @db.VarChar
-  terrain_data      String?                  @db.VarChar
   mobility_data     String?                  @db.VarChar
   maintenance_stats String?                  @db.VarChar
   location          Unsupported("geography")
   amenities         ParkAmenity[]
   reviews           Review[]
   safetyReports     SafetyReport[]
+  trails            trails[]
 }
 
 model ParkAmenity {
@@ -69,6 +69,17 @@ model spatial_ref_sys {
   auth_srid Int?
   srtext    String? @db.VarChar(2048)
   proj4text String? @db.VarChar(2048)
+}
+
+model trails {
+  id      Int                      @id @default(autoincrement())
+  park_id Int?
+  osm_id  BigInt?
+  highway String?                  @db.VarChar(50)
+  name    String?                  @db.VarChar(255)
+  surface String?                  @db.VarChar(50)
+  geom    Unsupported("geometry")?
+  Park    Park?                    @relation(fields: [park_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 enum ReportStatus {

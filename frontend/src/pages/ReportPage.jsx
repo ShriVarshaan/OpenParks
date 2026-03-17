@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
+import toast from "react-hot-toast"
 
 const REPORT_TYPES = ["Damaged equipment", "Litter", "Vandalism", "Unsafe path", "Flooding", "Other"];
 
@@ -6,6 +8,19 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
   const [form, setForm] = useState({ type: "", description: "", location: "" });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate()
+  const toastShown = useRef(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (!token && !toastShown.current){
+      toastShown.current = true
+      toast.error("Please login/signup first")
+      navigate("/login")
+      return
+    }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault();

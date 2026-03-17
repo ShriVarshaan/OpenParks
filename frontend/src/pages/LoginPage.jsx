@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast"
 import API from "../api/axiosInstance";
 import { useNavigate } from "react-router";
@@ -8,11 +8,13 @@ export default function LoginPage({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", username: "" });
   const [loading, setLoading] = useState(false);
+  const toastShown = useRef(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
 
-    if (token){
+    if (token && !toastShown.current){
+      toastShown.current = true
       toast.error("You are already logged in")
       navigate("/")
       return

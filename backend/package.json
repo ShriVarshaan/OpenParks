@@ -19,7 +19,6 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "joi": "^18.0.2",
-    "nodemailer-otp": "^1.0.8",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
@@ -32,8 +31,6 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": [
-      "**/tests/unit/**/*.test.js"
-    ]
+    "testMatch": ["**/tests/unit/**/*.test.js"]
   }
 }

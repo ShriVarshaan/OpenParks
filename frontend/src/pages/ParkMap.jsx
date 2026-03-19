@@ -17,40 +17,56 @@ const REPORT_CATEGORIES = [
   'Damaged equipment', 'Litter', 'Vandalism', 'Unsafe path', 'Flooding', 'Other'
 ]
 
+const normalStyle = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{
+    id: 'osm-base',
+    type: 'raster',
+    source: 'osm',
+    paint: {
+      'raster-saturation': -0.25,
+      'raster-brightness-min': 0.05,
+      'raster-contrast': 0.05,
+    },
+  }],
+}
+
 export default function MapRenderer() {
   const navigate = useNavigate()
   const mapContainer = useRef(null)
-  const mapRef       = useRef(null)
+  const mapRef = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
+
+  useEffect(() => {
+    const el = mapContainer.current
+    if (!el) return
+    const observer = new MutationObserver(() => {
+      el.style.setProperty('background-color', 'transparent', 'important')
+      const isHighContrast = document.body.classList.contains('high-contrast-mode')
+      el.style.filter = isHighContrast
+        ? 'invert(1) brightness(2.5) contrast(2) sepia(1) saturate(6) hue-rotate(0deg)'
+        : 'none'
+    })
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (mapRef.current) return
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [{
-          id: 'osm-base',
-          type: 'raster',
-          source: 'osm',
-          paint: {
-            'raster-saturation':     -0.25,
-            'raster-brightness-min':  0.05,
-            'raster-contrast':        0.05,
-          },
-        }],
-      },
+      style: normalStyle,
       center: [-1.9050, 52.4484],
-      zoom:    15.4,
+      zoom: 15.4,
       minZoom: 13,
       maxZoom: 19,
       maxBounds: [[-1.96, 52.42], [-1.86, 52.48]],
@@ -97,7 +113,7 @@ export default function MapRenderer() {
               'road',       '#888880',
               'residential','#888880',
               'service',    '#888880',
-              /* default */ '#a0724a'
+              '#a0724a'
             ],
             'line-width': 2
           }
@@ -123,7 +139,6 @@ export default function MapRenderer() {
         padding: '14px 24px', background: '#2d5a27',
         boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 32, height: 32, background: '#5a9e4f', borderRadius: '50%',
@@ -139,10 +154,9 @@ export default function MapRenderer() {
           </div>
         </div>
 
-        {/* Nav buttons */}
         <div style={{ display: 'flex', gap: 8 }}>
           <button key="Login" 
-            onClick = {() => navigate("/login")}
+            onClick={() => navigate("/login")}
             style={{
               background: 'rgba(255,255,255,0.12)',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -172,21 +186,10 @@ export default function MapRenderer() {
           }}>
             Report
           </button>
-          {/* {['Login', 'Review', 'Report'].map(label => (
-            <button key={label} style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff', fontSize: 13, fontWeight: 500,
-              padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}>
-              {label}
-            </button>
-          ))} */}
         </div>
       </nav>
 
-      {/* ── Report category bar ── */}
+      {/* Report category bar */}
       <div style={{
         position: 'absolute', top: 60, left: 0, right: 0, zIndex: 90,
         display: 'flex', justifyContent: 'center', padding: '8px 16px',
@@ -216,7 +219,7 @@ export default function MapRenderer() {
         </div>
       </div>
 
-        {/* ── Trail key ── */}
+      {/* Trail key */}
       <div style={{
         position: 'absolute', bottom: 40, left: 16, zIndex: 80,
         background: 'rgba(245,240,232,0.97)', borderRadius: 12,
@@ -229,8 +232,7 @@ export default function MapRenderer() {
         }}>
           Trail Types
         </div>
-
-          {TRAIL_TYPES.map(({ label, color, dashed, thick }) => (
+        {TRAIL_TYPES.map(({ label, color, dashed, thick }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, color: '#4a6648' }}>
             {dashed ? (
               <div style={{
@@ -247,9 +249,12 @@ export default function MapRenderer() {
         ))}
       </div>
 
-
       {/* Map */}
-      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+      <div
+        ref={mapContainer}
+        className="map-container-wrapper"
+        style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
+      />
     </div>
   )
 }

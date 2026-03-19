@@ -1,11 +1,4 @@
-.high-contrast-mode * {
-    background-color: #000000 !important;
-    color: #ffff00 !important;
-    border-color: #ffff00 !important;
-    outline-color: #ffff00 !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-}
+
 
 .high-contrast-mode button, 
 .high-contrast-mode .btn, 
@@ -141,7 +134,7 @@
 }
 
 .high-contrast-mode .maplibregl-map {
-    filter: grayscale(100%) contrast(150%);
+    
 }
 
 .high-contrast-mode input,
@@ -186,4 +179,32 @@ body {
     border: 2px solid #ffff00 !important;
     background-color: #000000 !important;
     display: block;
+}
+
+.high-contrast-mode .maplibregl-map,
+.high-contrast-mode .maplibregl-canvas,
+.high-contrast-mode .maplibregl-canvas-container,
+.high-contrast-mode #map {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+.high-contrast-mode .maplibregl-canvas {
+    filter: grayscale(100%) contrast(120%) !important;
+}
+
+.high-contrast-mode .map-container-wrapper,
+.high-contrast-mode .map-container-wrapper * {
+    background-color: transparent !important;
+}
+
+.high-contrast-mode.high-contrast-mode .map-container-wrapper {
+    background-color: transparent !important;
+}
+
+body.high-contrast-mode .map-container-wrapper,
+body.high-contrast-mode .map-container-wrapper *,
+body.high-contrast-mode .map-container-wrapper .maplibregl-map,
+body.high-contrast-mode .map-container-wrapper .maplibregl-canvas {
+    background-color: transparent !important;
 }

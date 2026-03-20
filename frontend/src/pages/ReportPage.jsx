@@ -1,49 +1,130 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import toast from "react-hot-toast"
+import toast from "react-hot-toast";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 
-const REPORT_TYPES = ["Damaged equipment", "Litter", "Vandalism", "Unsafe path", "Flooding", "Other"];
+
+// report types for menu
+const REPORT_TYPES = ["Damaged equipment", "Damaged path", "Vandalism", "Flooding", "Unsafe activity", "Other"];
+
+//how map looks
+const normalStyle = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{
+    id: 'osm-base',
+    type: 'raster',
+    source: 'osm',
+    paint: {
+      'raster-saturation': -0.25,
+      'raster-brightness-min': 0.05,
+      'raster-contrast': 0.05,
+    },
+  }],
+};
 
 export default function ReportPage({ parkName = "this park", onSubmit }) {
+  //current inputted values
   const [form, setForm] = useState({ type: "", description: "", location: "" });
+  //submitted or not
   const [submitted, setSubmitted] = useState(false);
+  //currently being submitted or not
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate()
-  const toastShown = useRef(false)
+  const navigate = useNavigate();
+  const toastShown = useRef(false);
 
+  //map refs
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+
+  //authorise if they are logged in
   useEffect(() => {
-    const token = localStorage.getItem("token")
-
-    if (!token && !toastShown.current){
-      toastShown.current = true
-      toast.error("Please login/signup first")
-      navigate("/login")
-      return
+    const token = localStorage.getItem("token");
+    if (!token && !toastShown.current) {
+      toastShown.current = true;
+      toast.error("Please login/signup first");
+      navigate("/login");
+      return;
     }
-  }, [])
+  }, []);
 
+  //show map and allow user to drop marker to select location
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    //create map (center at cannon hill park)
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: normalStyle,
+      center: [-1.9050, 52.4484],
+      zoom: 15.4,
+    });
+
+    //zoom buttons
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+    map.on("click", (e) => {
+      //get coordinates of pinpoint (where they clicked)
+      const { lng, lat } = e.lngLat;
+
+      //place marker (if one isnt already there) or move marker
+      if (markerRef.current) {
+        markerRef.current.setLngLat([lng, lat]);
+      } else {
+        markerRef.current = new maplibregl.Marker({ color: "#2d6a4f" })
+          .setLngLat([lng, lat])
+          .addTo(map);
+      }
+
+      //change location field to pinpoint coordinates
+      setForm((prev) => ({
+        ...prev,
+        //round coordinates to 5 decimal places 
+        location: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      }));
+    });
+
+    mapRef.current = map;
+
+    return () => map.remove();
+  }, []);
+
+  //submit report button handler
   const handleSubmit = async (e) => {
     e.preventDefault();
+    //check fields are filled in before submitting
     if (!form.type || !form.description) return;
     setLoading(true);
-    
-    //Cannot connect this to the backend without park location data
-    // try{  
 
-    // } catch (err){
 
-    // }
-    //setTimeout(() => { setLoading(false); setSubmitted(true); if (onSubmit) onSubmit(form); }, 1000);
-    setLoading(false)
+    //backend needed here
+
+    setLoading(false);
   };
 
+  //form submitted successfully (reset everything to allow for more reports)
   if (submitted) {
     return (
       <div style={styles.page}>
         <div style={styles.card}>
           <h1 style={styles.title}>OpenParks</h1>
           <p style={styles.success}>Report submitted. Thank you!</p>
-          <button style={styles.button} onClick={() => { setSubmitted(false); setForm({ type: "", description: "", location: "" }); }}>
+          <button
+            style={styles.button}
+            onClick={() => {
+              setSubmitted(false);
+              setForm({ type: "", description: "", location: "" });
+            }}
+          >
             Submit another
           </button>
         </div>
@@ -51,6 +132,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
     );
   }
 
+  //main UI for report form
   return (
     <div style={styles.page}>
       <div style={styles.card}>
@@ -59,6 +141,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
         <p style={styles.sub}>at {parkName}</p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
+          {/* drop down report type */}
           <label style={styles.label}>Issue type</label>
           <select
             style={styles.input}
@@ -67,18 +150,33 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
             required
           >
             <option value="">Select a type...</option>
-            {REPORT_TYPES.map((t) => <option key={t}>{t}</option>)}
+            {REPORT_TYPES.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
           </select>
 
-          <label style={styles.label}>Location hint <span style={styles.optional}>(optional)</span></label>
-          <input
-            style={styles.input}
-            type="text"
-            placeholder="e.g. Near the north entrance"
-            value={form.location}
-            onChange={(e) => setForm({ ...form, location: e.target.value })}
+          {/* mapand pinpoint */}
+          <label style={styles.label}>
+            Pin location on map{" "}
+            <span style={styles.optional}>(click to place a marker)</span>
+          </label>
+
+          {/* MapLibre map */}
+          <div
+            ref={mapContainerRef}
+            style={styles.mapContainer}
           />
 
+          {/* show coordinates they selected (read-only) */}
+          <input
+            style={{ ...styles.input, color: "#666", background: "#f9f9f9" }}
+            type="text"
+            placeholder="Click the map to set a location..."
+            value={form.location}
+            readOnly
+          />
+
+            {/* description of issue box */}
           <label style={styles.label}>Description</label>
           <textarea
             style={{ ...styles.input, resize: "vertical" }}
@@ -89,6 +187,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
             required
           />
 
+          {/* submit button */}
           <button style={styles.button} type="submit" disabled={loading}>
             {loading ? "Submitting..." : "Submit report"}
           </button>
@@ -98,6 +197,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
   );
 }
 
+//styles for the page
 const styles = {
   page: {
     minHeight: "100vh",
@@ -114,7 +214,7 @@ const styles = {
     borderRadius: 8,
     padding: "40px 32px",
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 480,
     boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
   },
   title: { margin: "0 0 24px", fontSize: 20, color: "#2d6a4f" },
@@ -132,6 +232,14 @@ const styles = {
     width: "100%",
     boxSizing: "border-box",
     fontFamily: "Arial, sans-serif",
+  },
+  mapContainer: {
+    width: "100%",
+    height: 250,
+    borderRadius: 6,
+    border: "1px solid #ddd",
+    overflow: "hidden",
+    marginTop: 4,
   },
   button: {
     marginTop: 12,

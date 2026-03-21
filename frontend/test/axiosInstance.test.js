@@ -4,13 +4,14 @@ import API from '../src/api/axiosInstance'
 
 vi.mock('axios', () => ({
     default: {
-        create: vi.fn().mockReturnValue({
+        create: vi.fn(() => ({
             interceptors: {
-                request: { use: vi.fn() },
+                request: { use: vi.fn((callback) => {axios.__interceptorCallback = callback})
+            },
                 response: { use: vi.fn() },
             },
-      }),
-    },
+        }))
+    }
 }))
 
 describe('axiosInstance', () => {
@@ -29,7 +30,8 @@ describe('axiosInstance', () => {
     it('adds bearer token to headers when token exists', () => {
         const testToken = 'test-jwt-token-123'
         localStorage.setItem('token', testToken)
-    
+
+        const createResult = axios.create()
         const interceptorFunction = axios.create().interceptors.request.use.mock.calls[0][0]
         const config = { headers: {} }
         const result = interceptorFunction(config)
@@ -38,6 +40,7 @@ describe('axiosInstance', () => {
     })
 
     it('does not add authorization header when no token', () => {
+        const createResult = axios.create()
         const interceptorFunction = axios.create().interceptors.request.use.mock.calls[0][0]
         const config = { headers: {} }
         const result = interceptorFunction(config)
@@ -46,6 +49,7 @@ describe('axiosInstance', () => {
     })
 
     it('returns the config object unchanged aside from headers', () => {
+        const createResult = axios.create()
         const interceptorFunction = axios.create().interceptors.request.use.mock.calls[0][0]
         const originalConfig = { headers: { 'X-Custom': 'value' }, url: '/test' }
         const result = interceptorFunction(originalConfig)

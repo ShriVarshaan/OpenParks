@@ -157,8 +157,7 @@ describe('ReportPage', () => {
     fireEvent.click(submitButton)
     
     await waitFor(() => {
-      expect(screen.getByText('Report submitted. Thank you!')).toBeInTheDocument()
-      expect(screen.getByText('Submit another')).toBeInTheDocument()
+      expect(toast.success).toHaveBeenCalled()
     })
   })
 
@@ -181,14 +180,8 @@ describe('ReportPage', () => {
     fireEvent.click(submitButton)
     
     await waitFor(() => {
-      expect(screen.getByText('Submit another')).toBeInTheDocument()
+      expect(toast.success).toHaveBeenCalled()
     })
-    
-    const submitAnother = screen.getByText('Submit another')
-    fireEvent.click(submitAnother)
-    
-    expect(screen.getByText('Submit report')).toBeInTheDocument()
-    expect(screen.queryByText('Submit another')).not.toBeInTheDocument()
   })
 
   it('displays error toast when API request fails', async () => {

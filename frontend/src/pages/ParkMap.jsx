@@ -42,11 +42,28 @@ const normalStyle = {
 export default function MapRenderer() {
   const navigate = useNavigate()
   const mapContainer = useRef(null)
+  const [trailData, setTrailData] = useState(null)
   const mapRef = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
   const [isLoggedIn, setLoggedIn] = useState(false)
 
   const reportsMarkersRef = useRef([])
+  const amenityMarkersRef = useRef([])
+
+  const AMENITY_ICONS = {
+    toilet:       { emoji: '🚻', color: '#4a9ebe', label: 'Toilets' },
+    bench:         { emoji: '🪑', color: '#a0724a', label: 'Bench' },
+    cafe:          { emoji: '☕', color: '#c8701a', label: 'Café' },
+    restaurant:    { emoji: '🍽️', color: '#e84040', label: 'Restaurant' },
+    drinking_water:{ emoji: '💧', color: '#2196f3', label: 'Drinking Water' },
+    playground:    { emoji: '🛝', color: '#f5a623', label: 'Playground' },
+    parking:       { emoji: '🅿️', color: '#607d8b', label: 'Parking' },
+    bicycle_parking:{ emoji:'🚲', color: '#8bc34a', label: 'Bike Parking' },
+    waste_basket:  { emoji: '🗑️', color: '#78909c', label: 'Bin' },
+    shelter:       { emoji: '⛺', color: '#6d8b3a', label: 'Shelter' },
+  }
+
+  const DEFAULT_AMENITY = { emoji: '📍', color: '#888', label: 'Amenity' }
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -88,6 +105,7 @@ export default function MapRenderer() {
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right')
 
+
     map.on('load', () => {
       API.get('/api/parks')
         .then(r => {
@@ -116,6 +134,7 @@ export default function MapRenderer() {
           id: 'trails-layer',
           type: 'line',
           source: 'trails',
+          minzoom: 14.5,
           paint: {
             'line-color': ['match', ['get', 'highway'],
               'footway',    '#5a9e4f',
@@ -132,6 +151,101 @@ export default function MapRenderer() {
           }
         })
       })
+
+
+      API.get("/api/amenities").then(r => {
+        map.addSource('amenities', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: r.data }
+        });
+
+        r.data.forEach(feature => {
+        const { name } = feature.properties
+        const [lng, lat] = feature.geometry.coordinates
+        const config = AMENITY_ICONS[name] ?? DEFAULT_AMENITY
+
+        const el = document.createElement('div')
+        el.style.cssText = `
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: ${config.color};
+          border: 2.5px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 15px;
+          cursor: pointer;
+        `
+        el.textContent = config.emoji
+
+        const popup = new maplibregl.Popup({ offset: 20, maxWidth: '220px' })
+          .setHTML(`
+            <div style="
+              font-family: inherit;
+              padding: 6px 4px 2px;
+              min-width: 160px;
+            ">
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 6px;
+              ">
+                <div style="
+                  width: 36px; height: 36px;
+                  border-radius: 50%;
+                  background: ${config.color}22;
+                  border: 2px solid ${config.color};
+                  display: flex; align-items: center;
+                  justify-content: center;
+                  font-size: 18px; flex-shrink: 0;
+                ">${config.emoji}</div>
+                <div>
+                  <div style="
+                    font-weight: 700;
+                    font-size: 13px;
+                    color: #2d5a27;
+                    line-height: 1.2;
+                  ">${name ?? config.label}</div>
+                  <div style="
+                    font-size: 10px;
+                    font-weight: 500;
+                    color: ${config.color};
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-top: 1px;
+                  ">${config.label}</div>
+                </div>
+              </div>
+            </div>
+          `)
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(popup)
+
+        amenityMarkersRef.current.push({ marker, el })
+      })
+
+      const updateMarkerVisibility = () => {
+        const zoom = map.getZoom()
+        amenityMarkersRef.current.forEach(({ marker, el }) => {
+          if (zoom >= 14.5) {
+            marker.addTo(map)
+            el.style.display = 'flex'
+          } else {
+            marker.remove()
+          }
+        })
+      }
+      updateMarkerVisibility()
+      map.on('zoom', updateMarkerVisibility)
+
+      
+      })
+      
     })
 
     mapRef.current = map
@@ -189,6 +303,14 @@ export default function MapRenderer() {
     }
 
   }, [activeCategory]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && trailData && map.isStyleLoaded()) {
+      const source = map.getSource('trails');
+      if (source) source.setData(trailData);
+    }
+  }, [trailData])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>

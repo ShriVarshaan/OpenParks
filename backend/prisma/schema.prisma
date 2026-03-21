@@ -30,11 +30,11 @@ model Park {
 }
 
 model ParkAmenity {
-  id          Int     @id @default(autoincrement())
-  park_id     Int
-  name        String  @db.VarChar
-  description String? @db.VarChar
-  park        Park    @relation(fields: [park_id], references: [id])
+  id       Int                      @id @default(autoincrement())
+  park_id  Int
+  name     String                   @db.VarChar
+  location Unsupported("geometry")?
+  park     Park                     @relation(fields: [park_id], references: [id])
 }
 
 model SafetyReport {

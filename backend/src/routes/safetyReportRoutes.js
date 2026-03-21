@@ -8,10 +8,10 @@ const router = express.Router()
 router.route("/")
     .post(passport.authenticate("jwt", {session: false}), createNewReport)
 
-router.route(":id")
+router.route("/:reportname")
     .get(getAllReports)
 
-router.route(":id/:reportid")
+router.route("/:id/:reportid")
     .patch(passport.authenticate("jwt", {session: false}), updateReport)
 
 export default router

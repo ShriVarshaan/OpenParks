@@ -9,7 +9,7 @@ import API from "../api/axiosInstance.js"
 
 
 // report types for menu
-const REPORT_TYPES = ["Damaged equipment", "Damaged path", "Vandalism", "Flooding", "Unsafe activity", "Other"];
+const REPORT_TYPES = ["Damaged equipment", "Litter", "Vandalism", "Unsafe path", "Flooding", "Other"];
 
 //how map looks
 const normalStyle = {
@@ -43,6 +43,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const toastShown = useRef(false);
+  
 
   const [parkPolygons, setParkPolygons] = useState(null)
 

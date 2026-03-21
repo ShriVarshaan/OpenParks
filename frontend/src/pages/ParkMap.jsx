@@ -44,6 +44,19 @@ export default function MapRenderer() {
   const mapContainer = useRef(null)
   const mapRef = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
+  const [isLoggedIn, setLoggedIn] = useState(false)
+
+  const reportsMarkersRef = useRef([])
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (token){
+      setLoggedIn(true)
+    }
+  }, [])
+
+  
 
   useEffect(() => {
     const el = mapContainer.current
@@ -129,6 +142,54 @@ export default function MapRenderer() {
     }
   }, [])
 
+  useEffect(() => {
+    const map = mapRef.current;
+    
+    if (!map) return;
+
+    reportsMarkersRef.current.forEach(marker => marker.remove());
+    reportsMarkersRef.current = [];
+    
+    if (!activeCategory) return;
+
+    const fetchReports = async () => {
+      try {
+        const response = await API.get(`/api/safetyreport/${activeCategory}`);
+        const allReports = response.data;
+
+        const filtered = allReports.filter(r => r.heading === activeCategory);
+
+        filtered.forEach(report => {
+          const [lng, lat] = report.location.coordinates;
+          
+          const popup = new maplibregl.Popup({ offset: 25 })
+            .setHTML(`
+              <div style="padding: 5px; font-family: sans-serif;">
+                <b style="color: #2d6a4f;">${report.heading}</b>
+                <p style="margin: 4px 0 0; font-size: 12px; color: #444;">${report.description}</p>
+              </div>
+            `);
+
+          const marker = new maplibregl.Marker({ color: "#e63946" })
+            .setLngLat([lng, lat])
+            .setPopup(popup)
+            .addTo(map);
+
+          reportsMarkersRef.current.push(marker);
+        });
+      } catch (err) {
+        console.error("Failed to fetch safety reports:", err.response?.status || err.message);
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      fetchReports();
+    } else {
+      map.once('idle', fetchReports);
+    }
+
+  }, [activeCategory]);
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
 
@@ -155,7 +216,9 @@ export default function MapRenderer() {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button key="Login" 
+
+          { !isLoggedIn && (
+            <button key="Login" 
             onClick={() => navigate("/login")}
             style={{
               background: 'rgba(255,255,255,0.12)',
@@ -165,7 +228,8 @@ export default function MapRenderer() {
               fontFamily: 'inherit',
           }}>
             Login
-          </button>
+          </button>)
+          }
           <button key="Review" style={{
             background: 'rgba(255,255,255,0.12)',
             border: '1px solid rgba(255,255,255,0.2)',

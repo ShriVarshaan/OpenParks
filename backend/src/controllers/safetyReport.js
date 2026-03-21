@@ -3,7 +3,19 @@ import prisma from "../config/prisma.js"
 //All the reports given a park id
 export const getAllReports = async (req, res) => {
     try{
-        const reports = await prisma.safetyReport.findMany({where: {park_id: (req.params.id)}})
+        const reports = await prisma.$queryRaw`
+            SELECT 
+                id, 
+                user_id, 
+                description, 
+                image, 
+                status, 
+                created_at, 
+                heading,
+                ST_AsGeoJSON(location)::json as location
+            FROM "SafetyReport"
+            WHERE heading = ${req.params.reportname}
+        `
         res.status(200).json(reports)
     } catch (err){
         console.log(err)

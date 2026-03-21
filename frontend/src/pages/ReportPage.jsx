@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import toast from "react-hot-toast";
 import maplibregl from "maplibre-gl";
+import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
+import { point } from "@turf/helpers";
 import "maplibre-gl/dist/maplibre-gl.css";
+import API from "../api/axiosInstance.js"
 
 
 // report types for menu
@@ -41,10 +44,13 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
   const navigate = useNavigate();
   const toastShown = useRef(false);
 
+  const [parkPolygons, setParkPolygons] = useState(null)
+
   //map refs
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const parkPolygonsRef = useRef(null);
 
   //authorise if they are logged in
   useEffect(() => {
@@ -72,26 +78,78 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
     //zoom buttons
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-    map.on("click", (e) => {
-      //get coordinates of pinpoint (where they clicked)
-      const { lng, lat } = e.lngLat;
+    map.on("load", async () => {
+      try {
+        const response = await API.get('/api/parks');
+        const geojsonData = response.data;
+        
+        // Save to state for the click handler
+        setParkPolygons(geojsonData);
+        parkPolygonsRef.current = geojsonData;
 
-      //place marker (if one isnt already there) or move marker
+        map.addSource('park-boundary', {
+          type: 'geojson',
+          data: geojsonData,
+        });
+
+        map.addLayer({
+          id: 'park-fill',
+          type: 'fill',
+          source: 'park-boundary',
+          paint: { 
+            'fill-color': '#5a9e4f', 
+            'fill-opacity': 0.2 
+          }
+        });
+
+        map.addLayer({
+          id: 'park-outline',
+          type: 'line',
+          source: 'park-boundary',
+          paint: { 
+            'line-color': '#2d5a27', 
+            'line-width': 2 
+          }
+        });
+      } catch (err) {
+        console.error("Error loading boundaries:", err);
+      }
+    });
+
+    map.on("click", (e) => {
+      const { lng, lat } = e.lngLat;
+      const clickedPt = point([lng, lat]);
+      const currentData = parkPolygonsRef.current
+
+      if (!currentData) {
+        toast.error("Park boundaries are still loading...");
+        return;
+      }
+
+      const isInsideAnyPark = currentData.features.some((feature) =>
+        booleanPointInPolygon(clickedPt, feature)
+      );
+
+      if (!isInsideAnyPark) {
+        toast.error("Location must be inside a park boundary");
+        return;
+      }
+
       if (markerRef.current) {
         markerRef.current.setLngLat([lng, lat]);
       } else {
-        markerRef.current = new maplibregl.Marker({ color: "#2d6a4f" })
+        markerRef.current = new maplibregl.Marker({ 
+          color: "#2d6a4f",
+          draggable: false 
+        })
           .setLngLat([lng, lat])
           .addTo(map);
       }
-
-      //change location field to pinpoint coordinates
       setForm((prev) => ({
         ...prev,
-        //round coordinates to 5 decimal places 
         location: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
       }));
-    });
+    })
 
     mapRef.current = map;
 
@@ -105,10 +163,37 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
     if (!form.type || !form.description) return;
     setLoading(true);
 
+    console.log(form)
 
-    //backend needed here
+    try {
+    // 1. Split the "lat, lng" string and parse to floats
+      const [lat, lng] = form.location.split(",").map(coord => parseFloat(coord.trim()));
 
-    setLoading(false);
+      // 2. Construct the payload for the backend
+      const payload = {
+          heading: form.type, // Renaming type to heading
+          description: form.description,
+          location: {
+            type: "Point",
+            coordinates: [lng, lat] // Standard GeoJSON order: [Longitude, Latitude]
+          }
+        };
+
+      // 3. Execute the POST request
+      const response = await API.post("/api/safetyreport", payload);
+
+      if (response.status === 201 || response.status === 200) {
+        toast.success("Report submitted successfully");
+        setSubmitted(true);
+        setLoading(false)
+        return navigate("/")
+      }
+    } catch(err){
+      console.error(err);
+      const errorMessage = err.response?.data?.message || "Failed to submit report. Please try again.";
+      toast.error(errorMessage);
+      setLoading(false)
+    }
   };
 
   //form submitted successfully (reset everything to allow for more reports)

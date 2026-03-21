@@ -26,7 +26,6 @@ model Park {
   location          Unsupported("geography")
   amenities         ParkAmenity[]
   reviews           Review[]
-  safetyReports     SafetyReport[]
   trails            trails[]
 }
 
@@ -41,13 +40,12 @@ model ParkAmenity {
 model SafetyReport {
   id          Int                      @id @default(autoincrement())
   user_id     Int
-  park_id     Int
   description String                   @db.VarChar
   image       Bytes?
   status      ReportStatus             @default(OPEN)
   created_at  DateTime                 @default(now())
   location    Unsupported("geography")
-  park        Park                     @relation(fields: [park_id], references: [id])
+  heading     String?
   user        User                     @relation(fields: [user_id], references: [id])
 }
 

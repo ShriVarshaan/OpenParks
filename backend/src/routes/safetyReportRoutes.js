@@ -5,9 +5,11 @@ import passport from "../config/passport.js"
 
 const router = express.Router()
 
+router.route("/")
+    .post(passport.authenticate("jwt", {session: false}), createNewReport)
+
 router.route(":id")
     .get(getAllReports)
-    .post(passport.authenticate("jwt", {session: false}), validateReport, createNewReport)
 
 router.route(":id/:reportid")
     .patch(passport.authenticate("jwt", {session: false}), updateReport)

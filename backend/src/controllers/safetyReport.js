@@ -13,32 +13,20 @@ export const getAllReports = async (req, res) => {
 export const createNewReport = async (req, res) => {
     try{
         const userId = Number(req.user.id)
-        const [park] = await prisma.$queryRaw`
-            SELECT 
-                id,
-                name,
-                terrain_data,
-                mobility_data,
-                maintenance_stats,
-                ST_AsGeoJSON(location)::json AS geometry
-            FROM public."Park"
-            WHERE id = ${Number(req.params.id)}
-        `;
-        if (!park) {
-            return res.status(404).json({ error: "Park not found" });
-        }
+
+        const [lng, lat] = req.body.location.coordinates
 
         const report = await prisma.$executeRaw`
             INSERT INTO public."SafetyReport" (
-                user_id, 
-                park_id, 
+                user_id,
                 description, 
-                location
+                location,
+                heading
             )VALUES(
                 ${Number(userId)},
-                ${Number(req.params.id)},
                 ${req.body.description},
-                ST_GeomFromGeoJSON(${park.geometry})
+                ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4236),
+                ${req.body.heading}
             )
             RETURNING *
             `;

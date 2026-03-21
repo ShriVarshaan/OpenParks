@@ -87,11 +87,3 @@ enum ReportStatus {
   RESOLVED
   PENDING
 }
-
-model otp{
-
-  user_id    int
-  code       string    @db.VarChar(64)
-  created_at string    @db.DateTime
-  user       User      @relation(fields: [user_id], references: [id])
-}

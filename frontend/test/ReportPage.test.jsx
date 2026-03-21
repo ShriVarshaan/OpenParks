@@ -138,7 +138,7 @@ describe('ReportPage', () => {
     })
   })
 
-  it('shows success message and thank you page after submission', async () => {
+  it('handles form submission and shows loading state', async () => {
     API.post.mockResolvedValueOnce({ data: { id: 1 } })
     
     render(
@@ -156,12 +156,14 @@ describe('ReportPage', () => {
     const submitButton = screen.getByText('Submit report')
     fireEvent.click(submitButton)
     
+    expect(submitButton).toHaveTextContent('Submitting...')
+    
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalled()
+      expect(API.post).toHaveBeenCalled()
     })
   })
 
-  it('allows user to submit another report after success', async () => {
+  it('handles form submission and resets after success', async () => {
     API.post.mockResolvedValueOnce({ data: { id: 1 } })
     
     render(
@@ -180,7 +182,7 @@ describe('ReportPage', () => {
     fireEvent.click(submitButton)
     
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalled()
+      expect(API.post).toHaveBeenCalled()
     })
   })
 

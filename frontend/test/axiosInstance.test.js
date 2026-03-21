@@ -1,16 +1,16 @@
-import {describe, it, expect, vi, beforeEach} from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import axios from 'axios'
 import API from '../src/api/axiosInstance'
 
 vi.mock('axios', () => ({
-    default: {
-        create: vi.fn().mockReturnValue({
-            interceptor: {
-                request: {use: vi.fn()},
-                Response: {use: vi.fn()},
-            },
-        }),
-    },
+  default: {
+    create: vi.fn().mockReturnValue({
+      interceptors: {
+        request: { use: vi.fn() },
+        response: { use: vi.fn() },
+      },
+    }),
+  },
 }))
 
 describe('axiosInstance', () => {

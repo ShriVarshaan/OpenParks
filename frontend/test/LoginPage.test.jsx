@@ -243,7 +243,7 @@ describe('LoginPage', () => {
     })
   })
 
-  it('handles registration with invalid fields', async () => {
+  it('does not submit registration with invalid fields', async () => {
     render(
       <BrowserRouter>
         <LoginPage />
@@ -264,7 +264,7 @@ describe('LoginPage', () => {
     fireEvent.click(submitButton)
     
     await waitFor(() => {
-      expect(API.post).toHaveBeenCalled()
+      expect(API.post).not.toHaveBeenCalled()
     })
   })
 

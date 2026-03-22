@@ -1,4 +1,6 @@
 import prisma from "../config/prisma.js"
+const nodemailer = require('nodemailer');
+import {checkIfPasswordUsed} from "../OTPController"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
@@ -20,6 +22,48 @@ export const signup = async (req, res, next) =>{
                 username: req.body.username
             }
         })
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: process.env.EMAIL_PORT,
+            secure: false, // true for port 465, false for 587
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+            });
+        
+        transporter.verify((error) => {
+            if (error) console.error('Email transporter error:', error);
+            else console.log('Email server is ready');
+        });
+        
+        const now = new Date();
+        used = true
+        while(used == true){
+            randomString = crypto.randomBytes(4).toString('hex')
+            used = checkIfPasswordUsed(req,res,randomString)
+        }
+
+        const newOTP = await prisma.OneTimePassword.create({
+            data: {
+                created_at: now,
+                value: randomString,
+                active: true,
+                email: req.body.email,
+
+            }
+        })
+            
+        const mailOptions = {
+            from: process.env.EMAIL_FROM,
+            to: req.body.email,
+            subject: "One Time Password Verification",
+            text: randomString,
+        };
+        
+        const info = await transporter.sendMail(mailOptions);``
+        
+        
         const token = jwt.sign(
             {id: newUser.id},
             process.env.JWT_SECRET,
@@ -62,6 +106,23 @@ export const login = async(req, res, next) => {
         user: { id: user.id, email: user.email }
     })
     } catch (err){
+        return res.status(401).json({message: "Invalid credentials"})
+    }
+}
+
+const checkIfPasswordUsed = async(req,res,oneTimePassword) =>{
+    try{
+        used = prisma.OTP.findUnique({where: {value: oneTimePassword}})
+        if(used){
+            return true
+        }
+        validation = prisma.OTP.findUnique({where: {email: req.body.email, active: true}})
+        if(validation){
+            validation.active = false
+        }
+        return false
+    }
+    catch(err){
         return res.status(401).json({message: "Invalid credentials"})
     }
 }

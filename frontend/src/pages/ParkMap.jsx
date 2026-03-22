@@ -63,7 +63,28 @@ export default function MapRenderer() {
     shelter:       { emoji: '⛺', color: '#6d8b3a', label: 'Shelter' },
   }
 
+
   const DEFAULT_AMENITY = { emoji: '📍', color: '#888', label: 'Amenity' }
+
+  function buildReportPopupHTML(report) {
+    return `
+      <div style="padding: 5px; font-family: sans-serif;">
+        <b style="color: #2d6a4f;">${report.heading}</b>
+        <p style="margin: 4px 0 6px; font-size: 12px; color: #444;">${report.description}</p>
+        ${isLoggedIn ? 
+          `<button
+            onclick="window.__resolveReport('${report.id}', this)"
+            style="
+              background: #f0faf0; border: 1.5px solid #5a9e4f; color: #2d5a27;
+              font-size: 11px; font-weight: 600; padding: 5px 12px;
+              border-radius: 20px; cursor: pointer;
+            "
+          >✓ Mark as resolved</button>`
+        : ""
+        }
+      </div>
+    `
+  }
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -74,6 +95,22 @@ export default function MapRenderer() {
   }, [])
 
   
+  useEffect(() => {
+    window.__resolveReport = async (reportId, btn) => {
+      try {
+        btn.disabled = true
+        btn.textContent = 'Resolving…'
+        await API.patch(`/api/safetyreport/${reportId}/resolve`)
+        btn.textContent = 'Resolved ✓'
+        btn.style.background = '#d4edda'
+        setTimeout(() => {
+          const entry = reportsMarkersRef.current.find(m => m.reportId === reportId)
+          if (entry) { entry.marker.remove(); reportsMarkersRef.current = reportsMarkersRef.current.filter(m => m.reportId !== reportId) }
+        }, 800)
+      } catch { btn.disabled = false; btn.textContent = '✓ Mark as resolved' }
+    }
+    return () => { delete window.__resolveReport }
+  }, [])
 
   useEffect(() => {
     const el = mapContainer.current
@@ -134,7 +171,6 @@ export default function MapRenderer() {
           id: 'trails-layer',
           type: 'line',
           source: 'trails',
-          minzoom: 14.5,
           paint: {
             'line-color': ['match', ['get', 'highway'],
               'footway',    '#5a9e4f',
@@ -261,7 +297,7 @@ export default function MapRenderer() {
     
     if (!map) return;
 
-    reportsMarkersRef.current.forEach(marker => marker.remove());
+    reportsMarkersRef.current.forEach(entry => entry.marker.remove());
     reportsMarkersRef.current = [];
     
     if (!activeCategory) return;
@@ -275,21 +311,18 @@ export default function MapRenderer() {
 
         filtered.forEach(report => {
           const [lng, lat] = report.location.coordinates;
+
+          console.log(report)
           
           const popup = new maplibregl.Popup({ offset: 25 })
-            .setHTML(`
-              <div style="padding: 5px; font-family: sans-serif;">
-                <b style="color: #2d6a4f;">${report.heading}</b>
-                <p style="margin: 4px 0 0; font-size: 12px; color: #444;">${report.description}</p>
-              </div>
-            `);
+            .setHTML(buildReportPopupHTML(report))
 
           const marker = new maplibregl.Marker({ color: "#e63946" })
             .setLngLat([lng, lat])
             .setPopup(popup)
             .addTo(map);
 
-          reportsMarkersRef.current.push(marker);
+          reportsMarkersRef.current.push({ marker, reportId: String(report.id) });
         });
       } catch (err) {
         console.error("Failed to fetch safety reports:", err.response?.status || err.message);

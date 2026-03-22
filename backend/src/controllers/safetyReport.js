@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js"
 
-//All the reports given a park id
+
 export const getAllReports = async (req, res) => {
     try{
         const reports = await prisma.$queryRaw`
@@ -14,7 +14,7 @@ export const getAllReports = async (req, res) => {
                 heading,
                 ST_AsGeoJSON(location)::json as location
             FROM "SafetyReport"
-            WHERE heading = ${req.params.reportname}
+            WHERE heading = ${req.params.reportname} AND status='OPEN';
         `
         res.status(200).json(reports)
     } catch (err){
@@ -52,13 +52,13 @@ export const createNewReport = async (req, res) => {
 
 export const updateReport = async (req, res) => {
     try{
-        const report = await prisma.safetyReport.findUnique({where: {park_id: Number(req.params.id)}})
+        const report = await prisma.safetyReport.findUnique({where: {id: Number(req.params.reportid)}})
 
         if (!report){
             return res.status(404).json({message: "report not found"})
         }
 
-        const updatedReport = await prisma.safetyReport.update({where: {id: Number(req.params.reportid)}, data:{status: req.body.status}})
+        const updatedReport = await prisma.safetyReport.update({where: {id: Number(req.params.reportid)}, data:{status: "RESOLVED"}})
         res.status(200).json(updatedReport)
     } catch (err) {
         if (err.code && err.code === "P2002"){

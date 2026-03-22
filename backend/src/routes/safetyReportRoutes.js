@@ -11,7 +11,7 @@ router.route("/")
 router.route("/:reportname")
     .get(getAllReports)
 
-router.route("/:id/:reportid")
+router.route("/:reportid/resolve")
     .patch(passport.authenticate("jwt", {session: false}), updateReport)
 
 export default router

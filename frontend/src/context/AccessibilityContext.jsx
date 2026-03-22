@@ -4,9 +4,14 @@ const AccessibilityContext = createContext();
 
 export const AccessibilityProvider = ({children}) => {
     const [highContrast, setHighContrast] = useState(false);
-    const toggleHighContrast = () => {
-        setHighContrast(prev => !prev);
-    };
+    const [fontSize, setFontSize] = useState(16);
+    const [boldText, setBoldText] = useState(false);
+
+    const toggleHighContrast = () => setHighContrast(prev => !prev);
+    const toggleBold = () => setBoldText(prev => !prev);
+    const increaseFontSize = () => setFontSize(prev => Math.min(prev + 2, 24));
+    const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 2, 12));
+
     useEffect(() => {
         if (highContrast) {
             document.body.classList.add('high-contrast-mode');
@@ -15,8 +20,16 @@ export const AccessibilityProvider = ({children}) => {
         }
     }, [highContrast]);
 
+    useEffect(() => {
+        document.documentElement.style.setProperty('--app-font-size', `${fontSize}px`);
+    }, [fontSize]);
+
+    useEffect(() => {
+        document.documentElement.style.setProperty('--app-font-weight', boldText ? 'bold' : 'normal');
+    }, [boldText]);
+
     return (
-        <AccessibilityContext.Provider value={{highContrast, toggleHighContrast}}>
+        <AccessibilityContext.Provider value={{highContrast, toggleHighContrast, fontSize, increaseFontSize, decreaseFontSize, boldText, toggleBold}}>
         {children}
         </AccessibilityContext.Provider>
     );

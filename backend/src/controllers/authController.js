@@ -1,9 +1,9 @@
 import prisma from "../config/prisma.js"
 const nodemailer = require('nodemailer');
-import {checkIfPasswordUsed} from "../OTPController"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
+import { sendVerificiaiton } from "./sendVerification.js";
 dotenv.config()
 
 export const signup = async (req, res, next) =>{
@@ -22,46 +22,8 @@ export const signup = async (req, res, next) =>{
                 username: req.body.username
             }
         })
-        const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: process.env.EMAIL_PORT,
-            secure: false, // true for port 465, false for 587
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-            });
         
-        transporter.verify((error) => {
-            if (error) console.error('Email transporter error:', error);
-            else console.log('Email server is ready');
-        });
-        
-        const now = new Date();
-        used = true
-        while(used == true){
-            randomString = crypto.randomBytes(4).toString('hex')
-            used = checkIfPasswordUsed(req,res,randomString)
-        }
-
-        const newOTP = await prisma.OneTimePassword.create({
-            data: {
-                created_at: now,
-                value: randomString,
-                active: true,
-                email: req.body.email,
-
-            }
-        })
-            
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
-            to: req.body.email,
-            subject: "One Time Password Verification",
-            text: randomString,
-        };
-        
-        const info = await transporter.sendMail(mailOptions);``
+        sendVerificiaiton(req,res,req.body.email)
         
         
         const token = jwt.sign(

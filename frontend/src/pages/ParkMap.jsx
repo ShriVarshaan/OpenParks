@@ -17,40 +17,123 @@ const REPORT_CATEGORIES = [
   'Damaged equipment', 'Litter', 'Vandalism', 'Unsafe path', 'Flooding', 'Other'
 ]
 
+const normalStyle = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{
+    id: 'osm-base',
+    type: 'raster',
+    source: 'osm',
+    paint: {
+      'raster-saturation': -0.25,
+      'raster-brightness-min': 0.05,
+      'raster-contrast': 0.05,
+    },
+  }],
+}
+
 export default function MapRenderer() {
   const navigate = useNavigate()
   const mapContainer = useRef(null)
-  const mapRef       = useRef(null)
+  const [trailData, setTrailData] = useState(null)
+  const mapRef = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
+  const [isLoggedIn, setLoggedIn] = useState(false)
+
+  const reportsMarkersRef = useRef([])
+  const amenityMarkersRef = useRef([])
+
+  const AMENITY_ICONS = {
+    toilet:       { emoji: '🚻', color: '#4a9ebe', label: 'Toilets' },
+    bench:         { emoji: '🪑', color: '#a0724a', label: 'Bench' },
+    cafe:          { emoji: '☕', color: '#c8701a', label: 'Café' },
+    restaurant:    { emoji: '🍽️', color: '#e84040', label: 'Restaurant' },
+    drinking_water:{ emoji: '💧', color: '#2196f3', label: 'Drinking Water' },
+    playground:    { emoji: '🛝', color: '#f5a623', label: 'Playground' },
+    parking:       { emoji: '🅿️', color: '#607d8b', label: 'Parking' },
+    bicycle_parking:{ emoji:'🚲', color: '#8bc34a', label: 'Bike Parking' },
+    waste_basket:  { emoji: '🗑️', color: '#78909c', label: 'Bin' },
+    shelter:       { emoji: '⛺', color: '#6d8b3a', label: 'Shelter' },
+  }
+
+
+  const DEFAULT_AMENITY = { emoji: '📍', color: '#888', label: 'Amenity' }
+
+  function buildReportPopupHTML(report) {
+    return `
+      <div style="padding: 5px; font-family: sans-serif;">
+        <b style="color: #2d6a4f;">${report.heading}</b>
+        <p style="margin: 4px 0 6px; font-size: 12px; color: #444;">${report.description}</p>
+        ${isLoggedIn ? 
+          `<button
+            onclick="window.__resolveReport('${report.id}', this)"
+            style="
+              background: #f0faf0; border: 1.5px solid #5a9e4f; color: #2d5a27;
+              font-size: 11px; font-weight: 600; padding: 5px 12px;
+              border-radius: 20px; cursor: pointer;
+            "
+          >✓ Mark as resolved</button>`
+        : ""
+        }
+      </div>
+    `
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (token){
+      setLoggedIn(true)
+    }
+  }, [])
+
+  
+  useEffect(() => {
+    window.__resolveReport = async (reportId, btn) => {
+      try {
+        btn.disabled = true
+        btn.textContent = 'Resolving…'
+        await API.patch(`/api/safetyreport/${reportId}/resolve`)
+        btn.textContent = 'Resolved ✓'
+        btn.style.background = '#d4edda'
+        setTimeout(() => {
+          const entry = reportsMarkersRef.current.find(m => m.reportId === reportId)
+          if (entry) { entry.marker.remove(); reportsMarkersRef.current = reportsMarkersRef.current.filter(m => m.reportId !== reportId) }
+        }, 800)
+      } catch { btn.disabled = false; btn.textContent = '✓ Mark as resolved' }
+    }
+    return () => { delete window.__resolveReport }
+  }, [])
+
+  useEffect(() => {
+    const el = mapContainer.current
+    if (!el) return
+    const observer = new MutationObserver(() => {
+      el.style.setProperty('background-color', 'transparent', 'important')
+      const isHighContrast = document.body.classList.contains('high-contrast-mode')
+      el.style.filter = isHighContrast
+        ? 'invert(1) brightness(2.5) contrast(2) sepia(1) saturate(6) hue-rotate(0deg)'
+        : 'none'
+    })
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (mapRef.current) return
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [{
-          id: 'osm-base',
-          type: 'raster',
-          source: 'osm',
-          paint: {
-            'raster-saturation':     -0.25,
-            'raster-brightness-min':  0.05,
-            'raster-contrast':        0.05,
-          },
-        }],
-      },
+      style: normalStyle,
       center: [-1.9050, 52.4484],
-      zoom:    15.4,
+      zoom: 15.4,
       minZoom: 13,
       maxZoom: 19,
       maxBounds: [[-1.96, 52.42], [-1.86, 52.48]],
@@ -58,6 +141,7 @@ export default function MapRenderer() {
 
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right')
+
 
     map.on('load', () => {
       API.get('/api/parks')
@@ -97,12 +181,107 @@ export default function MapRenderer() {
               'road',       '#888880',
               'residential','#888880',
               'service',    '#888880',
-              /* default */ '#a0724a'
+              '#a0724a'
             ],
             'line-width': 2
           }
         })
       })
+
+
+      API.get("/api/amenities").then(r => {
+        map.addSource('amenities', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: r.data }
+        });
+
+        r.data.forEach(feature => {
+        const { name } = feature.properties
+        const [lng, lat] = feature.geometry.coordinates
+        const config = AMENITY_ICONS[name] ?? DEFAULT_AMENITY
+
+        const el = document.createElement('div')
+        el.style.cssText = `
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: ${config.color};
+          border: 2.5px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 15px;
+          cursor: pointer;
+        `
+        el.textContent = config.emoji
+
+        const popup = new maplibregl.Popup({ offset: 20, maxWidth: '220px' })
+          .setHTML(`
+            <div style="
+              font-family: inherit;
+              padding: 6px 4px 2px;
+              min-width: 160px;
+            ">
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 6px;
+              ">
+                <div style="
+                  width: 36px; height: 36px;
+                  border-radius: 50%;
+                  background: ${config.color}22;
+                  border: 2px solid ${config.color};
+                  display: flex; align-items: center;
+                  justify-content: center;
+                  font-size: 18px; flex-shrink: 0;
+                ">${config.emoji}</div>
+                <div>
+                  <div style="
+                    font-weight: 700;
+                    font-size: 13px;
+                    color: #2d5a27;
+                    line-height: 1.2;
+                  ">${name ?? config.label}</div>
+                  <div style="
+                    font-size: 10px;
+                    font-weight: 500;
+                    color: ${config.color};
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-top: 1px;
+                  ">${config.label}</div>
+                </div>
+              </div>
+            </div>
+          `)
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(popup)
+
+        amenityMarkersRef.current.push({ marker, el })
+      })
+
+      const updateMarkerVisibility = () => {
+        const zoom = map.getZoom()
+        amenityMarkersRef.current.forEach(({ marker, el }) => {
+          if (zoom >= 14.5) {
+            marker.addTo(map)
+            el.style.display = 'flex'
+          } else {
+            marker.remove()
+          }
+        })
+      }
+      updateMarkerVisibility()
+      map.on('zoom', updateMarkerVisibility)
+
+      
+      })
+      
     })
 
     mapRef.current = map
@@ -112,6 +291,59 @@ export default function MapRenderer() {
       mapRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    const map = mapRef.current;
+    
+    if (!map) return;
+
+    reportsMarkersRef.current.forEach(entry => entry.marker.remove());
+    reportsMarkersRef.current = [];
+    
+    if (!activeCategory) return;
+
+    const fetchReports = async () => {
+      try {
+        const response = await API.get(`/api/safetyreport/${activeCategory}`);
+        const allReports = response.data;
+
+        const filtered = allReports.filter(r => r.heading === activeCategory);
+
+        filtered.forEach(report => {
+          const [lng, lat] = report.location.coordinates;
+
+          console.log(report)
+          
+          const popup = new maplibregl.Popup({ offset: 25 })
+            .setHTML(buildReportPopupHTML(report))
+
+          const marker = new maplibregl.Marker({ color: "#e63946" })
+            .setLngLat([lng, lat])
+            .setPopup(popup)
+            .addTo(map);
+
+          reportsMarkersRef.current.push({ marker, reportId: String(report.id) });
+        });
+      } catch (err) {
+        console.error("Failed to fetch safety reports:", err.response?.status || err.message);
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      fetchReports();
+    } else {
+      map.once('idle', fetchReports);
+    }
+
+  }, [activeCategory]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && trailData && map.isStyleLoaded()) {
+      const source = map.getSource('trails');
+      if (source) source.setData(trailData);
+    }
+  }, [trailData])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
@@ -123,7 +355,6 @@ export default function MapRenderer() {
         padding: '14px 24px', background: '#2d5a27',
         boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 32, height: 32, background: '#5a9e4f', borderRadius: '50%',
@@ -139,10 +370,11 @@ export default function MapRenderer() {
           </div>
         </div>
 
-        {/* Nav buttons */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button key="Login" 
-            onClick = {() => navigate("/login")}
+
+          { !isLoggedIn && (
+            <button key="Login" 
+            onClick={() => navigate("/login")}
             style={{
               background: 'rgba(255,255,255,0.12)',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -151,7 +383,8 @@ export default function MapRenderer() {
               fontFamily: 'inherit',
           }}>
             Login
-          </button>
+          </button>)
+          }
           <button key="Review" style={{
             background: 'rgba(255,255,255,0.12)',
             border: '1px solid rgba(255,255,255,0.2)',
@@ -172,21 +405,10 @@ export default function MapRenderer() {
           }}>
             Report
           </button>
-          {/* {['Login', 'Review', 'Report'].map(label => (
-            <button key={label} style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff', fontSize: 13, fontWeight: 500,
-              padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}>
-              {label}
-            </button>
-          ))} */}
         </div>
       </nav>
 
-      {/* ── Report category bar ── */}
+      {/* Report category bar */}
       <div style={{
         position: 'absolute', top: 60, left: 0, right: 0, zIndex: 90,
         display: 'flex', justifyContent: 'center', padding: '8px 16px',
@@ -216,7 +438,7 @@ export default function MapRenderer() {
         </div>
       </div>
 
-        {/* ── Trail key ── */}
+      {/* Trail key */}
       <div style={{
         position: 'absolute', bottom: 40, left: 16, zIndex: 80,
         background: 'rgba(245,240,232,0.97)', borderRadius: 12,
@@ -229,8 +451,7 @@ export default function MapRenderer() {
         }}>
           Trail Types
         </div>
-
-          {TRAIL_TYPES.map(({ label, color, dashed, thick }) => (
+        {TRAIL_TYPES.map(({ label, color, dashed, thick }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, color: '#4a6648' }}>
             {dashed ? (
               <div style={{
@@ -247,9 +468,12 @@ export default function MapRenderer() {
         ))}
       </div>
 
-
       {/* Map */}
-      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+      <div
+        ref={mapContainer}
+        className="map-container-wrapper"
+        style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
+      />
     </div>
   )
 }

@@ -1,11 +1,4 @@
-.high-contrast-mode * {
-    background-color: #000000 !important;
-    color: #ffff00 !important;
-    border-color: #ffff00 !important;
-    outline-color: #ffff00 !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-}
+
 
 .high-contrast-mode button, 
 .high-contrast-mode .btn, 
@@ -141,7 +134,7 @@
 }
 
 .high-contrast-mode .maplibregl-map {
-    filter: grayscale(100%) contrast(150%);
+    
 }
 
 .high-contrast-mode input,
@@ -186,4 +179,108 @@ body {
     border: 2px solid #ffff00 !important;
     background-color: #000000 !important;
     display: block;
+}
+
+.high-contrast-mode .maplibregl-map,
+.high-contrast-mode .maplibregl-canvas,
+.high-contrast-mode .maplibregl-canvas-container,
+.high-contrast-mode #map {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+.high-contrast-mode .maplibregl-canvas {
+    filter: grayscale(100%) contrast(120%) !important;
+}
+
+.high-contrast-mode .map-container-wrapper,
+.high-contrast-mode .map-container-wrapper * {
+    background-color: transparent !important;
+}
+
+.high-contrast-mode.high-contrast-mode .map-container-wrapper {
+    background-color: transparent !important;
+}
+
+body.high-contrast-mode .map-container-wrapper,
+body.high-contrast-mode .map-container-wrapper *,
+body.high-contrast-mode .map-container-wrapper .maplibregl-map,
+body.high-contrast-mode .map-container-wrapper .maplibregl-canvas {
+    background-color: transparent !important;
+}
+
+/* Navbar */
+.high-contrast-mode nav {
+    background: #000000 !important;
+    border-bottom: 2px solid #ffff00 !important;
+}
+
+.high-contrast-mode nav h1,
+.high-contrast-mode nav span {
+    color: #ffff00 !important;
+}
+
+/* Category bar */
+.high-contrast-mode nav + div > div {
+    background: #000000 !important;
+    border: 2px solid #ffff00 !important;
+}
+
+/* Trail legend */
+.high-contrast-mode div[style*="rgba(245,240,232"] {
+    background: #000000 !important;
+    border: 2px solid #ffff00 !important;
+    color: #ffff00 !important;
+}
+
+/* MapLibre zoom controls */
+.high-contrast-mode .maplibregl-ctrl-group {
+    background: #000000 !important;
+    border: 2px solid #ffff00 !important;
+}
+
+.high-contrast-mode .maplibregl-ctrl-group button {
+    background: #000000 !important;
+    color: #ffff00 !important;
+    border-bottom: 1px solid #ffff00 !important;
+    padding: 0 !important;
+}
+
+.high-contrast-mode .maplibregl-ctrl-group button:hover {
+    background: #ffff00 !important;
+    color: #000000 !important;
+}
+
+.high-contrast-mode .maplibregl-ctrl-icon {
+    filter: invert(1) sepia(1) saturate(10) hue-rotate(0deg) !important;
+}
+
+/* Scale bar */
+.high-contrast-mode .maplibregl-ctrl-scale {
+    background: #000000 !important;
+    border-color: #ffff00 !important;
+    color: #ffff00 !important;
+}
+
+/* Trail legend high contrast */
+.high-contrast-mode div[style*="158px"],
+.high-contrast-mode div[style*="minWidth"] {
+    background: #000000 !important;
+    border: 2px solid #ffff00 !important;
+}
+
+.high-contrast-mode div[style*="158px"] div,
+.high-contrast-mode div[style*="minWidth"] div {
+    color: #ffff00 !important;
+}
+
+/* Category bar high contrast */
+.high-contrast-mode div[style*="blur"] {
+    background: #000000 !important;
+    border: 2px solid #ffff00 !important;
+}
+
+* {
+    font-size: var(--app-font-size, 16px) !important;
+    font-weight: var(--app-font-weight, normal) !important;
 }

@@ -48,8 +48,12 @@ export default function LoginPage({ onLogin }) {
       } catch (err){
         if (err.response && err.response.status === 409){
           toast.error("User exists already, login")
-        }else{
-          console.log(err)
+        }else if (err.response?.data?.error){
+          console.log(err.response.data.error)
+          toast.error(err.response.data.error)
+        }
+        else{
+          console.log(err.response)
           toast.error("Invalid user/email/password fields")
         }
       }

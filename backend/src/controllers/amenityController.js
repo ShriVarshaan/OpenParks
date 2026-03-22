@@ -8,3 +8,34 @@ export const getAmenities = async (req, res) => {
         console.log(err)
     }
 }
+
+export const getAllAmenities = async (req, res) => {
+    try{
+        const amenities = await prisma.$queryRaw`
+            SELECT 
+                id,
+                park_id,
+                name,
+                ST_X(location::geometry) AS lng,
+                ST_Y(location::geometry) AS lat
+            FROM "ParkAmenity"
+        `
+
+        const geojson = amenities.map(a => ({
+            type: 'Feature',
+            geometry: {
+                type: 'Point',
+                coordinates: [a.lng, a.lat]
+            },
+            properties: {
+                id: a.id,
+                park_id: a.park_id,
+                name: a.name,
+                amenity: a.amenity,
+            }
+        }))
+        return res.status(200).json(geojson)
+    } catch (err) {
+        console.log(err)
+    }
+}

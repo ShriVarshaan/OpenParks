@@ -1,8 +1,15 @@
-.accessibility-toggle {
+.accessibility-controls {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: 50px;
+    right: 50px;
     z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.accessibility-toggle {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -23,10 +30,51 @@
     transform: scale(1.05);
 }
 
-toggle-icon {
+.toggle-icon {
     font-size: 18px;
 }
 
+.font-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: white;
+    border: 2px solid #4a7a5c;
+    border-radius: 40px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.font-controls button {
+    background: transparent;
+    border: 1.5px solid #4a7a5c;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    transition: all 0.2s;
+}
+
+.font-controls button:hover {
+    background: #4a7a5c;
+    color: white;
+}
+
+.font-controls span {
+    min-width: 36px;
+    text-align: center;
+    color: #4a7a5c;
+}
+
+/* High contrast styles */
 .high-contrast-mode .accessibility-toggle {
     background: #000000;
     border-color: #ffff00;
@@ -37,4 +85,25 @@ toggle-icon {
 .high-contrast-mode .accessibility-toggle:hover {
     background: #ffff00;
     color: #000000;
+}
+
+.high-contrast-mode .font-controls {
+    background: #000000;
+    border-color: #ffff00;
+    color: #ffff00;
+}
+
+.high-contrast-mode .font-controls button {
+    border-color: #ffff00;
+    color: #ffff00;
+    background: #000000;
+}
+
+.high-contrast-mode .font-controls button:hover {
+    background: #ffff00;
+    color: #000000;
+}
+
+.high-contrast-mode .font-controls span {
+    color: #ffff00;
 }

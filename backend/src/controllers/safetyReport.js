@@ -68,3 +68,19 @@ export const updateReport = async (req, res) => {
         }
     }
 }
+export const getAllReportsHeatmap = async (req, res) => {
+    try{
+        const reports = await prisma.$queryRaw`
+            SELECT 
+                id,
+                heading,
+                ST_AsGeoJSON(location)::json as location
+            FROM "SafetyReport"
+            WHERE status='OPEN';
+        `
+        res.status(200).json(reports)
+    } catch (err){
+        console.log(err)
+        res.status(500).json({error: "Server error"})
+    }
+}

@@ -1,7 +1,9 @@
 import prisma from "../config/prisma.js"
+const nodemailer = require('nodemailer');
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
+import { sendVerificiaiton } from "./sendVerification.js";
 dotenv.config()
 
 export const signup = async (req, res, next) =>{
@@ -20,6 +22,10 @@ export const signup = async (req, res, next) =>{
                 username: req.body.username
             }
         })
+        
+        sendVerificiaiton(req,res,req.body.email)
+        
+        
         const token = jwt.sign(
             {id: newUser.id},
             process.env.JWT_SECRET,
@@ -62,6 +68,23 @@ export const login = async(req, res, next) => {
         user: { id: user.id, email: user.email }
     })
     } catch (err){
+        return res.status(401).json({message: "Invalid credentials"})
+    }
+}
+
+const checkIfPasswordUsed = async(req,res,oneTimePassword) =>{
+    try{
+        used = prisma.OTP.findUnique({where: {value: oneTimePassword}})
+        if(used){
+            return true
+        }
+        validation = prisma.OTP.findUnique({where: {email: req.body.email, active: true}})
+        if(validation){
+            validation.active = false
+        }
+        return false
+    }
+    catch(err){
         return res.status(401).json({message: "Invalid credentials"})
     }
 }

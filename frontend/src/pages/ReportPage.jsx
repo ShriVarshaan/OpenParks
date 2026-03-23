@@ -36,7 +36,7 @@ const normalStyle = {
 
 export default function ReportPage({ parkName = "this park", onSubmit }) {
   //current inputted values
-  const [form, setForm] = useState({ type: "", description: "", location: "" });
+  const [form, setForm] = useState({ type: "", description: "", location: "", parkId: "" });
   //submitted or not
   const [submitted, setSubmitted] = useState(false);
   //currently being submitted or not
@@ -136,6 +136,8 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
         return;
       }
 
+      const parkId = isInsideAnyPark?.properties?.id
+
       if (markerRef.current) {
         markerRef.current.setLngLat([lng, lat]);
       } else {
@@ -149,6 +151,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
       setForm((prev) => ({
         ...prev,
         location: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        parkId: parkId
       }));
     })
 
@@ -177,7 +180,8 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
           location: {
             type: "Point",
             coordinates: [lng, lat] // Standard GeoJSON order: [Longitude, Latitude]
-          }
+          },
+          park_id: form.parkId,
         };
 
       // 3. Execute the POST request

@@ -1,6 +1,7 @@
 import express from "express"
 import {getAllReviewsPark, getReviewById, addReviewPark, updateReview, deleteReview} from "../controllers/reviewController.js"
 import { validateReview } from "../middleware/review.js"
+import passport from "../config/passport.js"
 
 const router = express.Router()
 
@@ -17,6 +18,6 @@ router.route("/edit/:id")
 
 router.route("/:parkId")
     .get(getAllReviewsPark)
-    .post(validateReview, addReviewPark)
+    .post(passport.authenticate("jwt", {session: false}), validateReview, addReviewPark)
 
 export default router

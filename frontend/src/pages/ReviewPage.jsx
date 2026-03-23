@@ -34,7 +34,7 @@ const normalStyle = {
 };
  
 export default function ReviewPage({ onSubmit }) {
-  const [form, setForm] = useState({ rating: "", title: "", body: "", location: "", coordinates: "" });
+  const [form, setForm] = useState({ rating: "", title: "", body: "", location: "", coordinates: "", parkId: "" });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -130,11 +130,15 @@ export default function ReviewPage({ onSubmit }) {
  
       // use park name from properties, fall back to coordinates if not found
       const parkLabel = matchedPark?.properties?.name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      const parkId = matchedPark?.properties?.id
+
+
  
       setForm((prev) => ({
         ...prev,
         location: parkLabel,
         coordinates: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        parkId: parkId,
       }));
     });
  
@@ -155,18 +159,11 @@ export default function ReviewPage({ onSubmit }) {
       const payload = {
         rating: parseInt(form.rating),
         title: form.title,
-        body: form.body,
-        parkName: form.location,
-        ...(lat && lng && {
-          location: {
-            type: "Point",
-            coordinates: [lng, lat],
-          },
-        }),
+        content: form.body
       };
  
       //backend
-      const response = await API.post("/api/reviews", payload);
+      const response = await API.post(`/api/reviews/${form.parkId}`, payload);
  
       if (response.status === 201 || response.status === 200) {
         toast.success("Review submitted successfully");

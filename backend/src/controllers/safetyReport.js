@@ -31,18 +31,20 @@ export const createNewReport = async (req, res) => {
         const report = await prisma.$executeRaw`
             INSERT INTO public."SafetyReport" (
                 user_id,
+                park_id,
                 description, 
                 location,
                 heading
             )VALUES(
                 ${Number(userId)},
+                ${Number(req.body.parkId)},
                 ${req.body.description},
                 ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4236),
                 ${req.body.heading}
             )
             RETURNING *
             `;
-        
+
         return res.status(201).json(report[0])
     } catch (err){
         console.log(err)

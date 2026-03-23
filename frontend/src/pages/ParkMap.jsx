@@ -375,57 +375,11 @@ export default function MapRenderer() {
     }
   }, [trailData])
 
-
-  // useEffect(() => {
-  //   const map = mapRef.current
-  //   if (!map) return
-
-  //   const addHeatmap = async () => {
-  //     try {
-  //       const response = await API.get('/api/safetyreport')
-  //       const reports = response.data
-  //       const geojson = {
-  //         type: 'FeatureCollection',
-  //         features: reports.map(r => ({
-  //           type: 'Feature',
-  //           geometry: r.location,
-  //           properties: { heading: r.heading }
-  //         }))
-  //       }
-  //       if (!map.getSource('heatmap-reports')) {
-  //         map.addSource('heatmap-reports', { type: 'geojson', data: geojson })
-  //         map.addLayer({
-  //           id: 'reports-heatmap',
-  //           type: 'heatmap',
-  //           source: 'heatmap-reports',
-  //           paint: {
-  //             'heatmap-weight': 1,
-  //             'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 19, 2],
-  //             'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
-  //               0, 'rgba(0,0,0,0)',
-  //               0.2, 'rgba(255,235,0,0.5)',
-  //               0.5, 'rgba(255,140,0,0.8)',
-  //               0.8, 'rgba(255,50,0,0.9)',
-  //               1, 'rgba(200,0,0,1)'
-  //             ],
-  //             'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 13, 15, 19, 40],
-  //             'heatmap-opacity': 0.8
-  //           }
-  //         })
-  //       } else {
-  //         map.getSource('heatmap-reports').setData(geojson)
-  //       }
-  //     } catch (err) {
-  //       console.error('Heatmap fetch failed:', err.message)
-  //     }
-  //   }
-
-  //   if (map.isStyleLoaded()) {
-  //     addHeatmap()
-  //   } else {
-  //     map.once('load', addHeatmap)
-  //   }
-  // }, [])
+  const handleLogout = () => {
+    console.log("logout called")
+    localStorage.removeItem("token")
+    setLoggedIn(false)
+  }
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
@@ -453,6 +407,21 @@ export default function MapRenderer() {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
+
+          {isLoggedIn && (
+            <button key="Logout"
+            onClick={handleLogout}
+            style={{
+              background: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff', fontSize: 13, fontWeight: 500,
+              padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
+              fontFamily: 'inherit',
+          }}
+            >
+              Logout 
+            </button>
+          )}
 
           { !isLoggedIn && (
             <button key="Login" 

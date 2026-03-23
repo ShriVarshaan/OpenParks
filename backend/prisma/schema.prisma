@@ -14,6 +14,7 @@ model User {
   username      String         @db.VarChar
   email         String         @unique @db.VarChar
   password      String         @db.VarChar
+  Verified      Boolean?       @default(false)
   reviews       Review[]
   safetyReports SafetyReport[]
 }
@@ -26,28 +27,26 @@ model Park {
   location          Unsupported("geography")
   amenities         ParkAmenity[]
   reviews           Review[]
-  safetyReports     SafetyReport[]
   trails            trails[]
 }
 
 model ParkAmenity {
-  id          Int     @id @default(autoincrement())
-  park_id     Int
-  name        String  @db.VarChar
-  description String? @db.VarChar
-  park        Park    @relation(fields: [park_id], references: [id])
+  id       Int                      @id @default(autoincrement())
+  park_id  Int
+  name     String                   @db.VarChar
+  location Unsupported("geometry")?
+  park     Park                     @relation(fields: [park_id], references: [id])
 }
 
 model SafetyReport {
   id          Int                      @id @default(autoincrement())
   user_id     Int
-  park_id     Int
   description String                   @db.VarChar
   image       Bytes?
   status      ReportStatus             @default(OPEN)
   created_at  DateTime                 @default(now())
   location    Unsupported("geography")
-  park        Park                     @relation(fields: [park_id], references: [id])
+  heading     String?
   user        User                     @relation(fields: [user_id], references: [id])
 }
 
@@ -80,6 +79,15 @@ model trails {
   surface String?                  @db.VarChar(50)
   geom    Unsupported("geometry")?
   Park    Park?                    @relation(fields: [park_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model OneTimePasswords {
+  id         BigInt   @id(map: "One Time Passwords_pkey") @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  value      String?  @default("NULL")
+  active     Boolean? @default(false)
+  email      String?
 }
 
 enum ReportStatus {

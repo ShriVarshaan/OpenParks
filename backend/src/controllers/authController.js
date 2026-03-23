@@ -51,15 +51,13 @@ export const login = async(req, res, next) => {
         }
         const match = await bcrypt.compare(req.body.password, user.password)
 
+        if(!match){
+            return res.status(401).json({message: "Invalid credentials"})
+        }
+
         if (!user.validated) {
             await sendVerification(req.body.email)
             return res.status(403).json({ message: "Please verify your email before logging in" })
-        }
-
-        
-
-        if(!match){
-            return res.status(401).json({message: "Invalid credentials"})
         }
 
         const token = jwt.sign(

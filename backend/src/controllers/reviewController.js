@@ -12,14 +12,15 @@ export const getAllReviewsPark = async (req, res, next) => {
 
 export const addReviewPark = async (req, res, next) => {
     try{
-        const park = await prisma.park.findUnique({where: {id: Number(req.params.parkId)}})
+        const parkId = Number(req.params.parkId ?? req.params.id)
+        const park = await prisma.park.findUnique({where: {id: parkId}})
         if (!park) {
             return res.status(404).json({message: "Park not found"})
         }
         const review = await prisma.review.create({
             data: {
                 user_id: Number(req.user.id),
-                park_id: Number(req.params.parkId),
+                park_id: parkId,
                 content: req.body.content,
                 rating: Number(req.body.rating)
             }})

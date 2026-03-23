@@ -6,6 +6,7 @@ const rowToFeature = (row) => ({
     properties: {
         id: row.id,
         name: row.name,
+        terrain_data: row.terrain_data,
         mobility_data: row.mobility_data,
         maintenance_stats: row.maintenance_stats,
         ...(row.distance && { distance: row.distance })
@@ -35,6 +36,7 @@ export const getParkById = async (req, res) => {
             SELECT 
                 id,
                 name,
+                terrain_data,
                 mobility_data,
                 maintenance_stats,
                 ST_AsGeoJSON(location)::json AS geometry

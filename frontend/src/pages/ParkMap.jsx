@@ -22,6 +22,47 @@ export default function MapRenderer() {
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
+  const [trailData, setTrailData] = useState(null)
+  const [isLoggedIn, setLoggedIn] = useState(false)
+
+  const reportsMarkersRef = useRef([])
+  const amenityMarkersRef = useRef([])
+  const userMarkerRef = useRef(null)
+
+  const AMENITY_ICONS = {
+    toilet:       { emoji: '🚻', color: '#4a9ebe', label: 'Toilets' },
+    bench:         { emoji: '🪑', color: '#a0724a', label: 'Bench' },
+    cafe:          { emoji: '☕', color: '#c8701a', label: 'Café' },
+    restaurant:    { emoji: '🍽️', color: '#e84040', label: 'Restaurant' },
+    drinking_water:{ emoji: '💧', color: '#2196f3', label: 'Drinking Water' },
+    playground:    { emoji: '🛝', color: '#f5a623', label: 'Playground' },
+    parking:       { emoji: '🅿️', color: '#607d8b', label: 'Parking' },
+    bicycle_parking:{ emoji:'🚲', color: '#8bc34a', label: 'Bike Parking' },
+    waste_basket:  { emoji: '🗑️', color: '#78909c', label: 'Bin' },
+    shelter:       { emoji: '⛺', color: '#6d8b3a', label: 'Shelter' },
+  }
+
+  const DEFAULT_AMENITY = { emoji: '📍', color: '#888', label: 'Amenity' }
+
+  function buildReportPopupHTML(report) {
+    return `
+      <div style="padding: 5px; font-family: sans-serif;">
+        <b style="color: #2d6a4f;">${report.heading}</b>
+        <p style="margin: 4px 0 6px; font-size: 12px; color: #444;">${report.description}</p>
+        ${isLoggedIn ? 
+          `<button
+            onclick="window.__resolveReport('${report.id}', this)"
+            style="
+              background: #f0faf0; border: 1.5px solid #5a9e4f; color: #2d5a27;
+              font-size: 11px; font-weight: 600; padding: 5px 12px;
+              border-radius: 20px; cursor: pointer;
+            "
+          >✓ Mark as resolved</button>`
+        : ""
+        }
+      </div>
+    `
+  }
 
   useEffect(() => {
     if (mapRef.current) return
@@ -237,6 +278,24 @@ export default function MapRenderer() {
       mapRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    window.__resolveReport = async (reportId, btn) => {
+      try {
+        btn.disabled = true
+        btn.textContent = 'Resolving…'
+        await API.patch(`/api/safetyreport/${reportId}/resolve`)
+        btn.textContent = 'Resolved ✓'
+        btn.style.background = '#d4edda'
+        setTimeout(() => {
+          const entry = reportsMarkersRef.current.find(m => m.reportId === reportId)
+          if (entry) { entry.marker.remove(); reportsMarkersRef.current = reportsMarkersRef.current.filter(m => m.reportId !== reportId) }
+        }, 800)
+      } catch { btn.disabled = false; btn.textContent = '✓ Mark as resolved' }
+    }
+    return () => { delete window.__resolveReport }
+  }, [])
+
 
   
   useEffect(() => {

@@ -24,6 +24,18 @@ jest.unstable_mockModule("bcrypt", () => ({
   },
 }));
 
+jest.unstable_mockModule("../../src/controllers/sendVerification.js", () => ({
+  sendVerificiaiton: jest.fn(),
+}));
+
+jest.unstable_mockModule("nodemailer", () => ({
+  default: {
+    createTransport: jest.fn().mockReturnValue({
+      sendMail: jest.fn(),
+    }),
+  },
+}));
+
 jest.unstable_mockModule("jsonwebtoken", () => ({
   default: {
     sign: mockSign,

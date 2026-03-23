@@ -20,7 +20,10 @@
     "express": "^5.2.1",
     "joi": "^18.0.2",
     "nodemailer": "^8.0.3",
+<<<<<<< HEAD
     "otplib": "^13.4.0",
+=======
+>>>>>>> c321235 (Fix failing unit tests and authController nodemailer import)
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
@@ -35,6 +38,13 @@
     "testEnvironment": "node",
     "testMatch": [
       "**/tests/unit/**/*.test.js"
+<<<<<<< HEAD
     ]
+=======
+    ],
+    "moduleNameMapper": {
+      "nodemailer": "<rootDir>/tests/__mocks__/nodemailer.js"
+    }
+>>>>>>> c321235 (Fix failing unit tests and authController nodemailer import)
   }
 }

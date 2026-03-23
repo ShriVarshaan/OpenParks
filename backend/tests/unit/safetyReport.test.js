@@ -36,21 +36,19 @@ describe("safetyReportController - getAllReports", () => {
     jest.clearAllMocks();
   });
 
-  test("returns all safety reports for a park", async () => {
-    const req = { params: { id: "1" } };
-    const res = createRes();
+test("returns all open safety reports for a report heading", async () => {
+  const req = { params: { reportname: "Litter" } };
+  const res = createRes();
 
-    const reports = [{ id: 1, park_id: 1, description: "Broken light" }];
-    mockFindMany.mockResolvedValue(reports);
+  const reports = [{ id: 1, heading: "Litter", description: "Broken light" }];
+  mockQueryRaw.mockResolvedValue(reports);
 
-    await getAllReports(req, res);
+  await getAllReports(req, res);
 
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { park_id: "1" },
-    });
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(reports);
-  });
+  expect(res.status).toHaveBeenCalledWith(200);
+  expect(res.json).toHaveBeenCalledWith(reports);
+});
+
 });
 
 describe("safetyReportController - createNewReport", () => {
@@ -58,75 +56,63 @@ describe("safetyReportController - createNewReport", () => {
     jest.clearAllMocks();
   });
 
-  test("returns 404 if park does not exist", async () => {
-    const req = {
-      params: { id: "1" },
-      body: { description: "Issue here" },
-      user: { id: 5 },
-    };
-    const res = createRes();
-
-    mockQueryRaw.mockResolvedValue([]);
-
-    await createNewReport(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ error: "Park not found" });
-  });
-
-  test("creates a new safety report", async () => {
-    const req = {
-      params: { id: "1" },
-      body: { description: "Broken bench" },
-      user: { id: 5 },
-    };
-    const res = createRes();
-
-    mockQueryRaw.mockResolvedValue([
-      {
-        id: 1,
-        name: "Park",
-        geometry: { type: "Point", coordinates: [1, 2] },
+test("creates a new safety report", async () => {
+  const req = {
+    body: {
+      description: "Broken bench",
+      heading: "Unsafe path",
+      location: {
+        coordinates: [1, 2],
       },
-    ]);
+    },
+    user: { id: 5 },
+  };
 
-    mockExecuteRaw.mockResolvedValue([
-      {
-        id: 100,
-        user_id: 5,
-        park_id: 1,
-        description: "Broken bench",
-      },
-    ]);
+  const res = createRes();
 
-    await createNewReport(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith({
+  mockExecuteRaw.mockResolvedValue([
+    {
       id: 100,
       user_id: 5,
-      park_id: 1,
       description: "Broken bench",
-    });
+      heading: "Unsafe path",
+    },
+  ]);
+
+  await createNewReport(req, res);
+
+  expect(res.status).toHaveBeenCalledWith(201);
+  expect(res.json).toHaveBeenCalledWith({
+    id: 100,
+    user_id: 5,
+    description: "Broken bench",
+    heading: "Unsafe path",
   });
+});
 
-  test("returns 500 if creating report fails", async () => {
-    const req = {
-      params: { id: "1" },
-      body: { description: "Broken bench" },
-      user: { id: 5 },
-    };
-    const res = createRes();
+test("returns 500 if creating report fails", async () => {
+  const req = {
+    body: {
+      description: "Broken bench",
+      heading: "Unsafe path",
+      location: {
+        coordinates: [1, 2],
+      },
+    },
+    user: { id: 5 },
+  };
 
-    mockQueryRaw.mockRejectedValue(new Error("DB failure"));
+  const res = createRes();
 
-    await createNewReport(req, res);
+  mockExecuteRaw.mockRejectedValue(new Error("DB failure"));
 
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      error: "Internal server error",
-    });
+  await createNewReport(req, res);
+
+  expect(res.status).toHaveBeenCalledWith(500);
+  expect(res.json).toHaveBeenCalledWith({
+    error: "Internal server error",
   });
+});
 });
 
 describe("safetyReportController - updateReport", () => {
@@ -157,22 +143,19 @@ describe("safetyReportController - updateReport", () => {
     const res = createRes();
 
     mockFindUnique.mockResolvedValue({ id: 10, park_id: 1 });
-    mockUpdate.mockResolvedValue({
-      id: 10,
-      status: "resolved",
-    });
-
+    mockUpdate.mockResolvedValue({ id: 10, status: 'RESOLVED' });
     await updateReport(req, res);
 
-    expect(mockUpdate).toHaveBeenCalledWith({
-      where: { id: 10 },
-      data: { status: "resolved" },
-    });
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      id: 10,
-      status: "resolved",
-    });
+	expect(mockUpdate).toHaveBeenCalledWith({
+  	where: { id: 10 },
+  	data: { status: "RESOLVED" },
+	});
+    
+	expect(res.status).toHaveBeenCalledWith(200);
+	expect(res.json).toHaveBeenCalledWith({
+  	id: 10,
+  	status: "RESOLVED",
+});
   });
 
   test("returns 400 for Prisma P2002 error", async () => {

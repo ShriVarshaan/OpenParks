@@ -3,7 +3,6 @@ import {useNavigate} from "react-router"
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import API from "../api/axiosInstance.js"
-import toast from "react-hot-toast"
 
 const TRAIL_TYPES = [
   { label: 'Footpath',       color: '#5a9e4f' },
@@ -18,18 +17,38 @@ const REPORT_CATEGORIES = [
   'Damaged equipment', 'Litter', 'Vandalism', 'Unsafe path', 'Flooding', 'Other'
 ]
 
+const normalStyle = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{
+    id: 'osm-base',
+    type: 'raster',
+    source: 'osm',
+    paint: {
+      'raster-saturation': -0.25,
+      'raster-brightness-min': 0.05,
+      'raster-contrast': 0.05,
+    },
+  }],
+}
+
 export default function MapRenderer() {
   const navigate = useNavigate()
   const mapContainer = useRef(null)
-  const mapRef       = useRef(null)
-  const [activeCategory, setActiveCategory] = useState(null)
   const [trailData, setTrailData] = useState(null)
+  const mapRef = useRef(null)
+  const [activeCategory, setActiveCategory] = useState(null)
   const [isLoggedIn, setLoggedIn] = useState(false)
-  const toastShown = useRef(false)
 
   const reportsMarkersRef = useRef([])
   const amenityMarkersRef = useRef([])
-  const userMarkerRef = useRef(null)
 
   const AMENITY_ICONS = {
     toilet:       { emoji: '🚻', color: '#4a9ebe', label: 'Toilets' },
@@ -43,6 +62,7 @@ export default function MapRenderer() {
     waste_basket:  { emoji: '🗑️', color: '#78909c', label: 'Bin' },
     shelter:       { emoji: '⛺', color: '#6d8b3a', label: 'Shelter' },
   }
+
 
   const DEFAULT_AMENITY = { emoji: '📍', color: '#888', label: 'Amenity' }
 
@@ -69,10 +89,41 @@ export default function MapRenderer() {
   useEffect(() => {
     const token = localStorage.getItem("token")
 
-    if (token && !toastShown.current){
+    if (token){
       setLoggedIn(true)
-      toast.error("You are already logged in")
     }
+  }, [])
+
+  
+  useEffect(() => {
+    window.__resolveReport = async (reportId, btn) => {
+      try {
+        btn.disabled = true
+        btn.textContent = 'Resolving…'
+        await API.patch(`/api/safetyreport/${reportId}/resolve`)
+        btn.textContent = 'Resolved ✓'
+        btn.style.background = '#d4edda'
+        setTimeout(() => {
+          const entry = reportsMarkersRef.current.find(m => m.reportId === reportId)
+          if (entry) { entry.marker.remove(); reportsMarkersRef.current = reportsMarkersRef.current.filter(m => m.reportId !== reportId) }
+        }, 800)
+      } catch { btn.disabled = false; btn.textContent = '✓ Mark as resolved' }
+    }
+    return () => { delete window.__resolveReport }
+  }, [])
+
+  useEffect(() => {
+    const el = mapContainer.current
+    if (!el) return
+    const observer = new MutationObserver(() => {
+      el.style.setProperty('background-color', 'transparent', 'important')
+      const isHighContrast = document.body.classList.contains('high-contrast-mode')
+      el.style.filter = isHighContrast
+        ? 'invert(1) brightness(2.5) contrast(2) sepia(1) saturate(6) hue-rotate(0deg)'
+        : 'none'
+    })
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -80,27 +131,7 @@ export default function MapRenderer() {
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [{
-          id: 'osm-base',
-          type: 'raster',
-          source: 'osm',
-          paint: {
-            'raster-saturation':     -0.25,
-            'raster-brightness-min':  0.05,
-            'raster-contrast':        0.05,
-          },
-        }],
-      },
+      style: normalStyle,
       center: [-1.9050, 52.4484],
       zoom: 15.4,
       minZoom: 13,
@@ -157,6 +188,35 @@ export default function MapRenderer() {
         })
       })
 
+      API.get('/api/safetyreport').then(reports => {
+        const geojson = {
+          type: 'FeatureCollection',
+          features: reports.data.map(r => ({
+            type: 'Feature',
+            geometry: r.location,
+            properties: { heading: r.heading }
+          }))
+        }
+        map.addSource('heatmap-reports', { type: 'geojson', data: geojson })
+        map.addLayer({
+          id: 'reports-heatmap',
+          type: 'heatmap',
+          source: 'heatmap-reports',
+          paint: {
+              'heatmap-weight': 1,
+              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 19, 2],
+              'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
+                0, 'rgba(0,0,0,0)',
+                0.2, 'rgba(255,235,0,0.5)',
+                0.5, 'rgba(255,140,0,0.8)',
+                0.8, 'rgba(255,50,0,0.9)',
+                1, 'rgba(200,0,0,1)'
+              ],
+              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 13, 15, 19, 40],
+              'heatmap-opacity': 0.8
+            }
+          })
+      }).catch(err => console.error('Heatmap fetch failed:', err.message))
 
       API.get("/api/amenities").then(r => {
         map.addSource('amenities', {
@@ -262,57 +322,6 @@ export default function MapRenderer() {
   }, [])
 
   useEffect(() => {
-    window.__resolveReport = async (reportId, btn) => {
-      try {
-        btn.disabled = true
-        btn.textContent = 'Resolving…'
-        await API.patch(`/api/safetyreport/${reportId}/resolve`)
-        btn.textContent = 'Resolved ✓'
-        btn.style.background = '#d4edda'
-        setTimeout(() => {
-          const entry = reportsMarkersRef.current.find(m => m.reportId === reportId)
-          if (entry) { entry.marker.remove(); reportsMarkersRef.current = reportsMarkersRef.current.filter(m => m.reportId !== reportId) }
-        }, 800)
-      } catch { btn.disabled = false; btn.textContent = '✓ Mark as resolved' }
-    }
-    return () => { delete window.__resolveReport }
-  }, [])
-
-
-  
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !navigator.geolocation) return
- 
-    const watchId = navigator.geolocation.watchPosition(
-      ({ coords }) => {
-        const { longitude, latitude } = coords
- 
-        if (!userMarkerRef.current) {
-          const el = document.createElement('div')
-          el.style.cssText = `
-            width:18px; height:18px; border-radius:50%;
-            background:#4285f4; border:3px solid #fff;
-            box-shadow:0 2px 8px rgba(0,0,0,0.4);`
-          userMarkerRef.current = new maplibregl.Marker({ element: el })
-            .setLngLat([longitude, latitude])
-            .addTo(map)
-        } else {
-          userMarkerRef.current.setLngLat([longitude, latitude])
-        }
-      },
-      (err) => console.warn('Geolocation error:', err),
-      { enableHighAccuracy: true }
-    )
- 
-    return () => {
-      navigator.geolocation.clearWatch(watchId)
-      userMarkerRef.current?.remove()
-      userMarkerRef.current = null
-    }
-  }, [mapRef.current]) 
-
-  useEffect(() => {
     const map = mapRef.current;
     
     if (!map) return;
@@ -366,56 +375,56 @@ export default function MapRenderer() {
   }, [trailData])
 
 
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+  // useEffect(() => {
+  //   const map = mapRef.current
+  //   if (!map) return
 
-    const addHeatmap = async () => {
-      try {
-        const response = await API.get('/api/safetyreport')
-        const reports = response.data
-        const geojson = {
-          type: 'FeatureCollection',
-          features: reports.map(r => ({
-            type: 'Feature',
-            geometry: r.location,
-            properties: { heading: r.heading }
-          }))
-        }
-        if (!map.getSource('heatmap-reports')) {
-          map.addSource('heatmap-reports', { type: 'geojson', data: geojson })
-          map.addLayer({
-            id: 'reports-heatmap',
-            type: 'heatmap',
-            source: 'heatmap-reports',
-            paint: {
-              'heatmap-weight': 1,
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 19, 2],
-              'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
-                0, 'rgba(0,0,0,0)',
-                0.2, 'rgba(255,235,0,0.5)',
-                0.5, 'rgba(255,140,0,0.8)',
-                0.8, 'rgba(255,50,0,0.9)',
-                1, 'rgba(200,0,0,1)'
-              ],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 13, 15, 19, 40],
-              'heatmap-opacity': 0.8
-            }
-          })
-        } else {
-          map.getSource('heatmap-reports').setData(geojson)
-        }
-      } catch (err) {
-        console.error('Heatmap fetch failed:', err.message)
-      }
-    }
+  //   const addHeatmap = async () => {
+  //     try {
+  //       const response = await API.get('/api/safetyreport')
+  //       const reports = response.data
+  //       const geojson = {
+  //         type: 'FeatureCollection',
+  //         features: reports.map(r => ({
+  //           type: 'Feature',
+  //           geometry: r.location,
+  //           properties: { heading: r.heading }
+  //         }))
+  //       }
+  //       if (!map.getSource('heatmap-reports')) {
+  //         map.addSource('heatmap-reports', { type: 'geojson', data: geojson })
+  //         map.addLayer({
+  //           id: 'reports-heatmap',
+  //           type: 'heatmap',
+  //           source: 'heatmap-reports',
+  //           paint: {
+  //             'heatmap-weight': 1,
+  //             'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 19, 2],
+  //             'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
+  //               0, 'rgba(0,0,0,0)',
+  //               0.2, 'rgba(255,235,0,0.5)',
+  //               0.5, 'rgba(255,140,0,0.8)',
+  //               0.8, 'rgba(255,50,0,0.9)',
+  //               1, 'rgba(200,0,0,1)'
+  //             ],
+  //             'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 13, 15, 19, 40],
+  //             'heatmap-opacity': 0.8
+  //           }
+  //         })
+  //       } else {
+  //         map.getSource('heatmap-reports').setData(geojson)
+  //       }
+  //     } catch (err) {
+  //       console.error('Heatmap fetch failed:', err.message)
+  //     }
+  //   }
 
-    if (map.isStyleLoaded()) {
-      addHeatmap()
-    } else {
-      map.once('load', addHeatmap)
-    }
-  }, [])
+  //   if (map.isStyleLoaded()) {
+  //     addHeatmap()
+  //   } else {
+  //     map.once('load', addHeatmap)
+  //   }
+  // }, [])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>

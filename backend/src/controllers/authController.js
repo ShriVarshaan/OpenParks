@@ -1,9 +1,9 @@
 import prisma from "../config/prisma.js"
-//const nodemailer = require('nodemailer');
+import nodemailer from "nodemailer"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
-import { sendVerificiaiton } from "./sendVerification.js";
+import { sendVerification } from "./sendVerification.js";
 dotenv.config()
 
 export const signup = async (req, res, next) =>{
@@ -15,6 +15,7 @@ export const signup = async (req, res, next) =>{
         }
 
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
+        //await sendVerification(req,res,req.body.email)
         const newUser = await prisma.user.create({
             data: {
                 email: req.body.email,
@@ -23,7 +24,6 @@ export const signup = async (req, res, next) =>{
             }
         })
         
-        sendVerificiaiton(req,res,req.body.email)
         
         
         const token = jwt.sign(
@@ -74,11 +74,11 @@ export const login = async(req, res, next) => {
 
 const checkIfPasswordUsed = async(req,res,oneTimePassword) =>{
     try{
-        used = prisma.OTP.findUnique({where: {value: oneTimePassword}})
+        used = prisma.oneTimePassword.findUnique({where: {value: oneTimePassword}})
         if(used){
             return true
         }
-        validation = prisma.OTP.findUnique({where: {email: req.body.email, active: true}})
+        validation = prisma.oneTimePassword.findUnique({where: {email: req.body.email, active: true}})
         if(validation){
             validation.active = false
         }

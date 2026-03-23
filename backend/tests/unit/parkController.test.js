@@ -100,10 +100,11 @@ describe("parkController - getParkById", () => {
       {
         id: 1,
         name: "Central Park",
-        geometry: { type: "Point", coordinates: [1, 2] },
+        terrain_data: "Flat",
         mobility_data: "Wheelchair accessible",
         maintenance_stats: "Good",
-      }
+        geometry: { type: "Point", coordinates: [1, 2] },
+      },
     ]);
 
     await getParkById(req, res);
@@ -112,11 +113,10 @@ describe("parkController - getParkById", () => {
     expect(res.json).toHaveBeenCalledWith({
       type: "Feature",
       geometry: { type: "Point", coordinates: [1, 2] },
-
-
-    properties: {
+      properties: {
         id: 1,
         name: "Central Park",
+        terrain_data: "Flat",
         mobility_data: "Wheelchair accessible",
         maintenance_stats: "Good",
       },

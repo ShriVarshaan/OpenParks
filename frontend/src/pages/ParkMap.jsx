@@ -46,6 +46,8 @@ export default function MapRenderer() {
   const mapRef = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
   const [isLoggedIn, setLoggedIn] = useState(false)
+  const userMarkerRef = useRef(null)
+
 
   const reportsMarkersRef = useRef([])
   const amenityMarkersRef = useRef([])
@@ -380,6 +382,39 @@ export default function MapRenderer() {
     localStorage.removeItem("token")
     setLoggedIn(false)
   }
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !navigator.geolocation) return
+ 
+    const watchId = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        const { longitude, latitude } = coords
+ 
+        if (!userMarkerRef.current) {
+          const el = document.createElement('div')
+          el.style.cssText = `
+            width:18px; height:18px; border-radius:50%;
+            background:#4285f4; border:3px solid #fff;
+            box-shadow:0 2px 8px rgba(0,0,0,0.4);`
+          userMarkerRef.current = new maplibregl.Marker({ element: el })
+            .setLngLat([longitude, latitude])
+            .addTo(map)
+        } else {
+          userMarkerRef.current.setLngLat([longitude, latitude])
+        }
+      },
+      (err) => console.warn('Geolocation error:', err),
+      { enableHighAccuracy: true }
+    )
+ 
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+      userMarkerRef.current?.remove()
+      userMarkerRef.current = null
+    }
+  }, [mapRef.current])
+
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>

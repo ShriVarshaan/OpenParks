@@ -17,26 +17,63 @@ const REPORT_CATEGORIES = [
   'Damaged equipment', 'Litter', 'Vandalism', 'Unsafe path', 'Flooding', 'Other'
 ]
 
+const NORMAL_OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const HIGH_CONTRAST_TILES = 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+
 const normalStyle = {
   version: 8,
   sources: {
     osm: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: [NORMAL_OSM_TILES],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+    osmColor: {
+      type: 'raster',
+      tiles: [NORMAL_OSM_TILES],
       tileSize: 256,
       attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [{
-    id: 'osm-base',
-    type: 'raster',
-    source: 'osm',
-    paint: {
-      'raster-saturation': -0.25,
-      'raster-brightness-min': 0.05,
-      'raster-contrast': 0.05,
+  layers: [
+    {
+      id: 'osm-base',
+      type: 'raster',
+      source: 'osm',
+      paint: {
+        'raster-saturation': -0.25,
+        'raster-brightness-min': 0.05,
+        'raster-contrast': 0.05,
+      },
     },
-  }],
+    {
+      id: 'osm-color-cues',
+      type: 'raster',
+      source: 'osmColor',
+      paint: {
+        'raster-opacity': 0,
+        'raster-saturation': 0.2,
+        'raster-brightness-min': 0.15,
+        'raster-brightness-max': 1,
+        'raster-contrast': 0.1,
+      },
+    },
+  ],
+}
+
+const NORMAL_MAP_PAINT = {
+  saturation: -0.25,
+  brightnessMin: 0.05,
+  brightnessMax: 1,
+  contrast: 0.05,
+}
+
+const HIGH_CONTRAST_MAP_PAINT = {
+  saturation: 0.2,
+  brightnessMin: 0.3,
+  brightnessMax: 1,
+  contrast: 0.75,
 }
 
 export default function MapRenderer() {
@@ -51,6 +88,79 @@ export default function MapRenderer() {
 
   const reportsMarkersRef = useRef([])
   const amenityMarkersRef = useRef([])
+
+  const applyContrastMapStyling = (isHighContrast) => {
+    const map = mapRef.current
+    if (!map || !map.isStyleLoaded()) return
+
+    const base = isHighContrast ? HIGH_CONTRAST_MAP_PAINT : NORMAL_MAP_PAINT
+    const osmSource = map.getSource('osm')
+    if (osmSource && typeof osmSource.setTiles === 'function') {
+      osmSource.setTiles([isHighContrast ? HIGH_CONTRAST_TILES : NORMAL_OSM_TILES])
+    }
+    const colorCueSource = map.getSource('osmColor')
+    if (colorCueSource && typeof colorCueSource.setTiles === 'function') {
+      colorCueSource.setTiles([NORMAL_OSM_TILES])
+    }
+
+    // Keep semantic map colors (green parks, blue water) while increasing separation.
+    map.setPaintProperty('osm-base', 'raster-saturation', base.saturation)
+    map.setPaintProperty('osm-base', 'raster-brightness-min', base.brightnessMin)
+    map.setPaintProperty('osm-base', 'raster-brightness-max', base.brightnessMax)
+    map.setPaintProperty('osm-base', 'raster-contrast', base.contrast)
+    if (map.getLayer('osm-color-cues')) {
+      map.setPaintProperty('osm-color-cues', 'raster-opacity', isHighContrast ? 0.28 : 0)
+      map.setPaintProperty('osm-color-cues', 'raster-saturation', isHighContrast ? 0.85 : 0.2)
+      map.setPaintProperty('osm-color-cues', 'raster-brightness-min', isHighContrast ? 0.2 : 0.15)
+      map.setPaintProperty('osm-color-cues', 'raster-brightness-max', isHighContrast ? 0.9 : 1)
+      map.setPaintProperty('osm-color-cues', 'raster-contrast', isHighContrast ? 0.35 : 0.1)
+    }
+
+    if (map.getLayer('park-fill')) {
+      map.setPaintProperty('park-fill', 'fill-color', isHighContrast ? '#00b140' : '#5a9e4f')
+      map.setPaintProperty('park-fill', 'fill-opacity', isHighContrast ? 0.5 : 0.15)
+    }
+
+    if (map.getLayer('park-outline')) {
+      map.setPaintProperty('park-outline', 'line-color', isHighContrast ? '#a8ff8a' : '#2d5a27')
+      map.setPaintProperty('park-outline', 'line-width', isHighContrast ? 4 : 2.5)
+    }
+
+    if (map.getLayer('trails-layer')) {
+      map.setPaintProperty('trails-layer', 'line-color',
+        isHighContrast
+          ? ['match', ['get', 'highway'],
+              'footway',    '#ffffff',
+              'cycleway',   '#ffd54a',
+              'bridleway',  '#b08cff',
+              'path',       '#d8d8d8',
+              'track',      '#d8d8d8',
+              'road',       '#ffffff',
+              'residential','#ffffff',
+              'service',    '#ffffff',
+              '#d8d8d8'
+            ]
+          : ['match', ['get', 'highway'],
+              'footway',    '#5a9e4f',
+              'cycleway',   '#e8a020',
+              'bridleway',  '#9b6fce',
+              'path',       '#a0724a',
+              'track',      '#a0724a',
+              'road',       '#888880',
+              'residential','#888880',
+              'service',    '#888880',
+              '#a0724a'
+            ]
+      )
+      map.setPaintProperty('trails-layer', 'line-width', isHighContrast ? 3.4 : 2)
+      map.setPaintProperty('trails-layer', 'line-opacity', isHighContrast ? 1 : 0.9)
+    }
+
+    const el = mapContainer.current
+    if (el) {
+      el.style.filter = 'none'
+    }
+  }
 
   const AMENITY_ICONS = {
     toilet:       { emoji: '🚻', color: '#4a9ebe', label: 'Toilets' },
@@ -119,10 +229,11 @@ export default function MapRenderer() {
     if (!el) return
     const observer = new MutationObserver(() => {
       el.style.setProperty('background-color', 'transparent', 'important')
+      // Preserve native map colors (parks/water) in high contrast mode.
+      // Contrast treatment is handled by UI chrome, not by recoloring the map tiles.
+      el.style.filter = 'none'
       const isHighContrast = document.body.classList.contains('high-contrast-mode')
-      el.style.filter = isHighContrast
-        ? 'invert(1) brightness(2.5) contrast(2) sepia(1) saturate(6) hue-rotate(0deg)'
-        : 'none'
+      applyContrastMapStyling(isHighContrast)
     })
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
     return () => observer.disconnect()
@@ -313,6 +424,9 @@ export default function MapRenderer() {
 
       
       })
+
+      const isHighContrast = document.body.classList.contains('high-contrast-mode')
+      applyContrastMapStyling(isHighContrast)
       
     })
 

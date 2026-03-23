@@ -55,14 +55,14 @@
 
 .high-contrast-mode {
     --bg-cream: #000000;
-    --text-dark: #ffff00;
-    --text-mid: #ffffff;
-    --park-green: #0000ff;
-    --park-light: #3333ff;
-    --park-pale: #444444;
-    --accent-amber: #ffaa00;
-    --panel-bg: #222222;
-    --shadow: 0 0 0 2px #ffff00;
+    --text-dark: #ffffff;
+    --text-mid: #e8e8e8;
+    --park-green: #00ffff;
+    --park-light: #5fffff;
+    --park-pale: #1a1a1a;
+    --accent-amber: #00ffff;
+    --panel-bg: #101010;
+    --shadow: 0 0 0 2px #00ffff;
 }
 
 .high-contrast-mode body {
@@ -95,8 +95,8 @@
 }
 
 .high-contrast-mode #filter-bar, .high-contrast-mode #trail-bar {
-    background: #222222;
-    border: 2px solid #ffff00;
+    background: #101010;
+    border: 2px solid #ffffff;
     box-shadow: none;
 }
 
@@ -104,18 +104,19 @@
     background: transparent;
     border: 2px solid transparent;
     color: #ffffff;
+    font-weight: 700;
 }
 
 .high-contrast-mode .filter-btn:hover {
-    background: #444444;
-    border-color: #ffff00;
-    color: #ffff00;
+    background: #1a1a1a;
+    border-color: #00ffff;
+    color: #00ffff;
 }
 
 .high-contrast-mode .filter-btn.active {
-    background: #0000ff;
-    border-color: #ffff00;
-    color: #ffff00;
+    background: #ffffff;
+    border-color: #00ffff;
+    color: #000000;
 }
 
 .high-contrast-mode .trail-label {
@@ -123,45 +124,41 @@
 }
 
 .high-contrast-mode .trail-btn {
-    background: #222222;
+    background: #101010;
     border: 2px solid #ffffff;
     color: #ffffff;
 }
 
 .high-contrast-mode #map {
-    border-top: 2px solid #ffff00;
-    border-bottom: 2px solid #ffff00;
-}
-
-.high-contrast-mode .maplibregl-map {
-    
+    border-top: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
 }
 
 .high-contrast-mode input,
 .high-contrast-mode textarea,
 .high-contrast-mode select {
-    background: #222222;
-    color: #ffff00;
-    border: 2px solid #ffff00;
+    background: #0b0b0b;
+    color: #ffffff;
+    border: 2px solid #ffffff;
     padding: 8px;
 }
 
 .high-contrast-mode input::placeholder {
-    color: #aaaaaa;
+    color: #d0d0d0;
 }
 
 .high-contrast-mode button {
-    background: #0000ff;
-    color: #ffff00;
-    border: 2px solid #ffff00;
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #00ffff;
     font-weight: bold;
     padding: 8px 16px;
     cursor: pointer;
 }
 
 .high-contrast-mode button:hover {
-    background: #ffff00;
-    color: #0000ff;
+    background: #00ffff;
+    color: #000000;
 }
 
 .high-contrast-mode * {
@@ -190,7 +187,8 @@ body {
 }
 
 .high-contrast-mode .maplibregl-canvas {
-    filter: grayscale(100%) contrast(120%) !important;
+    /* Keep map colors intact; apply high contrast to UI chrome instead */
+    filter: none !important;
 }
 
 .high-contrast-mode .map-container-wrapper,
@@ -236,30 +234,30 @@ body.high-contrast-mode .map-container-wrapper .maplibregl-canvas {
 /* MapLibre zoom controls */
 .high-contrast-mode .maplibregl-ctrl-group {
     background: #000000 !important;
-    border: 2px solid #ffff00 !important;
+    border: 2px solid #ffffff !important;
 }
 
 .high-contrast-mode .maplibregl-ctrl-group button {
     background: #000000 !important;
-    color: #ffff00 !important;
-    border-bottom: 1px solid #ffff00 !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid #ffffff !important;
     padding: 0 !important;
 }
 
 .high-contrast-mode .maplibregl-ctrl-group button:hover {
-    background: #ffff00 !important;
+    background: #00ffff !important;
     color: #000000 !important;
 }
 
 .high-contrast-mode .maplibregl-ctrl-icon {
-    filter: invert(1) sepia(1) saturate(10) hue-rotate(0deg) !important;
+    filter: invert(1) !important;
 }
 
 /* Scale bar */
 .high-contrast-mode .maplibregl-ctrl-scale {
     background: #000000 !important;
-    border-color: #ffff00 !important;
-    color: #ffff00 !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
 }
 
 /* Trail legend high contrast */

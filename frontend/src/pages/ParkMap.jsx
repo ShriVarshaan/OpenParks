@@ -188,6 +188,35 @@ export default function MapRenderer() {
         })
       })
 
+      API.get('/api/safetyreport').then(reports => {
+        const geojson = {
+          type: 'FeatureCollection',
+          features: reports.data.map(r => ({
+            type: 'Feature',
+            geometry: r.location,
+            properties: { heading: r.heading }
+          }))
+        }
+        map.addSource('heatmap-reports', { type: 'geojson', data: geojson })
+        map.addLayer({
+          id: 'reports-heatmap',
+          type: 'heatmap',
+          source: 'heatmap-reports',
+          paint: {
+              'heatmap-weight': 1,
+              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 19, 2],
+              'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
+                0, 'rgba(0,0,0,0)',
+                0.2, 'rgba(255,235,0,0.5)',
+                0.5, 'rgba(255,140,0,0.8)',
+                0.8, 'rgba(255,50,0,0.9)',
+                1, 'rgba(200,0,0,1)'
+              ],
+              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 13, 15, 19, 40],
+              'heatmap-opacity': 0.8
+            }
+          })
+      }).catch(err => console.error('Heatmap fetch failed:', err.message))
 
       API.get("/api/amenities").then(r => {
         map.addSource('amenities', {
@@ -346,56 +375,56 @@ export default function MapRenderer() {
   }, [trailData])
 
 
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+  // useEffect(() => {
+  //   const map = mapRef.current
+  //   if (!map) return
 
-    const addHeatmap = async () => {
-      try {
-        const response = await API.get('/api/safetyreport')
-        const reports = response.data
-        const geojson = {
-          type: 'FeatureCollection',
-          features: reports.map(r => ({
-            type: 'Feature',
-            geometry: r.location,
-            properties: { heading: r.heading }
-          }))
-        }
-        if (!map.getSource('heatmap-reports')) {
-          map.addSource('heatmap-reports', { type: 'geojson', data: geojson })
-          map.addLayer({
-            id: 'reports-heatmap',
-            type: 'heatmap',
-            source: 'heatmap-reports',
-            paint: {
-              'heatmap-weight': 1,
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 19, 2],
-              'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
-                0, 'rgba(0,0,0,0)',
-                0.2, 'rgba(255,235,0,0.5)',
-                0.5, 'rgba(255,140,0,0.8)',
-                0.8, 'rgba(255,50,0,0.9)',
-                1, 'rgba(200,0,0,1)'
-              ],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 13, 15, 19, 40],
-              'heatmap-opacity': 0.8
-            }
-          })
-        } else {
-          map.getSource('heatmap-reports').setData(geojson)
-        }
-      } catch (err) {
-        console.error('Heatmap fetch failed:', err.message)
-      }
-    }
+  //   const addHeatmap = async () => {
+  //     try {
+  //       const response = await API.get('/api/safetyreport')
+  //       const reports = response.data
+  //       const geojson = {
+  //         type: 'FeatureCollection',
+  //         features: reports.map(r => ({
+  //           type: 'Feature',
+  //           geometry: r.location,
+  //           properties: { heading: r.heading }
+  //         }))
+  //       }
+  //       if (!map.getSource('heatmap-reports')) {
+  //         map.addSource('heatmap-reports', { type: 'geojson', data: geojson })
+  //         map.addLayer({
+  //           id: 'reports-heatmap',
+  //           type: 'heatmap',
+  //           source: 'heatmap-reports',
+  //           paint: {
+  //             'heatmap-weight': 1,
+  //             'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 19, 2],
+  //             'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
+  //               0, 'rgba(0,0,0,0)',
+  //               0.2, 'rgba(255,235,0,0.5)',
+  //               0.5, 'rgba(255,140,0,0.8)',
+  //               0.8, 'rgba(255,50,0,0.9)',
+  //               1, 'rgba(200,0,0,1)'
+  //             ],
+  //             'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 13, 15, 19, 40],
+  //             'heatmap-opacity': 0.8
+  //           }
+  //         })
+  //       } else {
+  //         map.getSource('heatmap-reports').setData(geojson)
+  //       }
+  //     } catch (err) {
+  //       console.error('Heatmap fetch failed:', err.message)
+  //     }
+  //   }
 
-    if (map.isStyleLoaded()) {
-      addHeatmap()
-    } else {
-      map.once('load', addHeatmap)
-    }
-  }, [])
+  //   if (map.isStyleLoaded()) {
+  //     addHeatmap()
+  //   } else {
+  //     map.once('load', addHeatmap)
+  //   }
+  // }, [])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>

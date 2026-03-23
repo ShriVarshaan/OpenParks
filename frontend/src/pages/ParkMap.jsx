@@ -45,6 +45,7 @@ export default function MapRenderer() {
   const [trailData, setTrailData] = useState(null)
   const mapRef = useRef(null)
   const [activeCategory, setActiveCategory] = useState(null)
+<<<<<<< Updated upstream
   const [isLoggedIn, setLoggedIn] = useState(false)
 
   const reportsMarkersRef = useRef([])
@@ -125,6 +126,9 @@ export default function MapRenderer() {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
     return () => observer.disconnect()
   }, [])
+=======
+  
+>>>>>>> Stashed changes
 
   useEffect(() => {
     if (mapRef.current) return

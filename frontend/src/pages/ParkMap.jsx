@@ -3,6 +3,7 @@ import {useNavigate} from "react-router"
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import API from "../api/axiosInstance.js"
+import toast from "react-hot-toast"
 
 const TRAIL_TYPES = [
   { label: 'Footpath',       color: '#5a9e4f' },
@@ -24,6 +25,7 @@ export default function MapRenderer() {
   const [activeCategory, setActiveCategory] = useState(null)
   const [trailData, setTrailData] = useState(null)
   const [isLoggedIn, setLoggedIn] = useState(false)
+  const toastShown = useRef(false)
 
   const reportsMarkersRef = useRef([])
   const amenityMarkersRef = useRef([])
@@ -63,6 +65,15 @@ export default function MapRenderer() {
       </div>
     `
   }
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (token && !toastShown.current){
+      setLoggedIn(true)
+      toast.error("You are already logged in")
+    }
+  }, [])
 
   useEffect(() => {
     if (mapRef.current) return

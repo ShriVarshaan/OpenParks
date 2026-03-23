@@ -4,7 +4,7 @@ If so, it then maeks the account which is attached to that email be verified
 */
 
 import prisma from "../config/prisma.js"
-const nodemailer = require('nodemailer');
+//const nodemailer = require('nodemailer');
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"

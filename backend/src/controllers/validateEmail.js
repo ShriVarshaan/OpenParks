@@ -20,7 +20,7 @@ export const checkValidOTP = async(req,res) =>{
         }
         const now = new Date();
         const diffMinutes = (now-OTP.created_at)/(1000*60)
-        if((OTP.value == req.body.otp)||(diffMinutes>5)){
+        if((!OTP.oneTimePassword == req.body.otp)||(diffMinutes<5)){
             if(diffMinutes>5){
                 const updateOTP = await prisma.oneTimePassword.update({
                     where: { email: req.body.email, active: true},

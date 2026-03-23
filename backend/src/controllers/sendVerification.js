@@ -1,12 +1,11 @@
 import prisma from "../config/prisma.js"
-import nodemailer from 'nodemailer';
-import crypto from "crypto"
+const nodemailer = require('nodemailer');
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
 dotenv.config()
 
-export const sendVerification = async(req,res,recipient) =>{
+export const sendVerificiaiton = async(req,res,recipient) =>{
     const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT,
@@ -23,14 +22,13 @@ export const sendVerification = async(req,res,recipient) =>{
     });
 
     const now = new Date();
-    let used = true
-    let randomString
+    used = true
     while(used == true){
     randomString = crypto.randomBytes(4).toString('hex')
-    used = await checkIfPasswordUsed(req,res,randomString)
+    used = checkIfPasswordUsed(req,res,randomString)
     }
 
-    const newOTP = await prisma.oneTimePasswords.create({
+    const newOTP = await prisma.OneTimePassword.create({
     data: {
         created_at: now,
         value: randomString,
@@ -52,16 +50,13 @@ export const sendVerification = async(req,res,recipient) =>{
 
 const checkIfPasswordUsed = async(req,res,recipient,oneTimePassword) =>{
     try{
-        const used = await prisma.OneTimePassword.findUnique({where: {value: oneTimePassword}})
+        used = prisma.OTP.findUnique({where: {value: oneTimePassword}})
         if(used){
             return true
         }
-        const validation = await prisma.OneTimePassword.findUnique({where: {email: recipient, active: true}})
+        validation = prisma.OTP.findUnique({where: {email: recipient, active: true}})
         if(validation){
-            await prisma.oneTimePassword.update({
-                where: { email: recipient },
-                data: { active: false }
-            })
+            validation.active = false
         }
         return false
     }

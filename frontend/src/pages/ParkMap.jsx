@@ -466,7 +466,9 @@ export default function MapRenderer() {
             Login
           </button>)
           }
-          <button key="Review" style={{
+          <button key="Review" 
+          onClick={() => navigate("/review")}
+          style={{
             background: 'rgba(255,255,255,0.12)',
             border: '1px solid rgba(255,255,255,0.2)',
             color: '#fff', fontSize: 13, fontWeight: 500,

@@ -16,7 +16,7 @@ const loaclStorageMock = (() => {
   }
 })()
 
-Object.defineProperty(window, 'localStorage', {value: loaclStorageMock})
+Object.defineProperty(window, 'localStorage', {value: localStorageMock})
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

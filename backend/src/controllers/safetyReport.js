@@ -3,9 +3,19 @@ import prisma from "../config/prisma.js"
 
 export const getAllReports = async (req, res) => {
     try{
-        const reports = await prisma.safetyReport.findMany({
-            where: { park_id: req.params.id },
-        })
+        const reports = await prisma.$queryRaw`
+            SELECT 
+                id, 
+                user_id, 
+                description, 
+                image, 
+                status, 
+                created_at, 
+                heading,
+                ST_AsGeoJSON(location)::json as location
+            FROM "SafetyReport"
+            WHERE heading = ${req.params.reportname} AND status='OPEN';
+        `
         res.status(200).json(reports)
     } catch (err){
         console.log(err)
@@ -15,16 +25,8 @@ export const getAllReports = async (req, res) => {
 export const createNewReport = async (req, res) => {
     try{
         const userId = Number(req.user.id)
-        const parkId = Number(req.params.id ?? req.body.parkId)
-        const park = await prisma.$queryRaw`
-            SELECT id
-            FROM public."Park"
-            WHERE id = ${parkId}
-            LIMIT 1
-        `
-        if (!park || park.length === 0) {
-            return res.status(404).json({ error: "Park not found" })
-        }
+
+        const [lng, lat] = req.body.location.coordinates
 
 
         const report = await prisma.$executeRaw`
@@ -32,11 +34,13 @@ export const createNewReport = async (req, res) => {
                 user_id,
                 park_id,
                 description, 
+                location,
                 heading
             )VALUES(
                 ${Number(userId)},
-                ${Number(req.body.park_id ?? parkId)},
+                ${Number(req.body.park_id)},
                 ${req.body.description},
+                ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4236),
                 ${req.body.heading}
             )
             RETURNING *
@@ -57,10 +61,7 @@ export const updateReport = async (req, res) => {
             return res.status(404).json({message: "report not found"})
         }
 
-        const updatedReport = await prisma.safetyReport.update({
-            where: {id: Number(req.params.reportid)},
-            data:{status: req.body.status},
-        })
+        const updatedReport = await prisma.safetyReport.update({where: {id: Number(req.params.reportid)}, data:{status: "RESOLVED"}})
         res.status(200).json(updatedReport)
     } catch (err) {
         if (err.code && err.code === "P2002"){

@@ -151,6 +151,11 @@ describe("reviewController - getAllReviewsUser", () => {
 
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { user_id: 10 },
+      include: {
+        park: {
+          select: { name: true },
+        },
+      },
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(reviews);

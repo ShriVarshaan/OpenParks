@@ -623,6 +623,22 @@ export default function MapRenderer() {
             Login
           </button>)
           }
+
+          {isLoggedIn && (
+            <button key="Account"
+            onClick={() => navigate("/account")}
+            style={{
+              background: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff', fontSize: 13, fontWeight: 500,
+              padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}>
+              My Account
+            </button>
+          )}
+
+
           <button key="Review" 
           onClick={() => navigate("/review")}
           style={{

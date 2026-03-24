@@ -6,6 +6,7 @@ import amenityRoutes from "./routes/amenitiesRoutes.js"
 import safetyRoutes from "./routes/safetyReportRoutes.js"
 import reviewRoutes from "./routes/reviewRoutes.js"
 import trailRoutes from "./routes/trailRoutes.js"
+import userRoutes from "./routes/accountRoutes.js"
 import cors from "cors"
 //import emailRoutes from "./routes/emailRoutes.js"
 import "./config/passport.js"
@@ -27,6 +28,7 @@ app.use("/api/amenities", amenityRoutes)
 app.use("/api/safetyreport", safetyRoutes)
 app.use("/api/reviews", reviewRoutes)
 app.use("/api/trails", trailRoutes)
+app.use("/api/user", userRoutes)
 //app.use('/api/email', emailRoutes);
 
 

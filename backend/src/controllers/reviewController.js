@@ -33,7 +33,7 @@ export const addReviewPark = async (req, res, next) => {
 //For the users page
 export const getAllReviewsUser = async (req, res) => {
     try{
-        const reviews = await prisma.review.findMany({where: {user_id: Number(req.user.id)}})
+        const reviews = await prisma.review.findMany({where: {user_id: Number(req.user.id)}, include: {park: {select: {name: true}}}})
         return res.status(200).json(reviews)
     } catch (err){
         console.log(err)

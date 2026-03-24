@@ -22,6 +22,15 @@ export const getAllReports = async (req, res) => {
     }
 }
 
+export const getUserReports = async (req, res) => {
+    try{
+        const reports = await prisma.safetyReport.findMany({where: {user_id: Number(req.user.id), park_id: {not: null}}, include: {Park: {select: {name: true}}}})
+        return res.status(200).json(reports)
+    } catch (err){
+        console.log(err)
+    }
+}
+
 export const createNewReport = async (req, res) => {
     try{
         const userId = Number(req.user.id)

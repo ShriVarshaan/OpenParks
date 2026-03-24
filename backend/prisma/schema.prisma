@@ -50,9 +50,8 @@ model SafetyReport {
   heading     String?
   park_id     Int?
   Park        Park?                    @relation(fields: [park_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  user        User                     @relation(fields: [user_id], references: [id])
+  user        User                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
-
 model Review {
   id         Int      @id @default(autoincrement())
   user_id    Int
@@ -62,7 +61,7 @@ model Review {
   created_at DateTime @default(now())
   title      String?
   park       Park     @relation(fields: [park_id], references: [id])
-  user       User     @relation(fields: [user_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

@@ -6,6 +6,7 @@ import AccessibilityToggle from './components/AccessibilityToggle'
 import ReportPage from './pages/ReportPage'
 import LoginPage from './pages/LoginPage'
 import ReviewPage from './pages/ReviewPage'
+import AccountPage from './pages/AccountPage'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -17,6 +18,7 @@ function App() {
             <Route path="/report" element={<ReportPage />}></Route>
             <Route path="/login" element={<LoginPage />}></Route>
             <Route path="/review" element={<ReviewPage />}></Route>
+            <Route path="/account" element={<AccountPage />}></Route>
           </Routes>
         <AccessibilityToggle />
       </div>

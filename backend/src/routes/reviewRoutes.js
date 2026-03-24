@@ -1,15 +1,16 @@
 import express from "express"
-import {getAllReviewsPark, getReviewById, addReviewPark, updateReview, deleteReview} from "../controllers/reviewController.js"
+import {getAllReviewsPark, getReviewById, addReviewPark, updateReview, deleteReview, getAllReviewsUser} from "../controllers/reviewController.js"
 import { validateReview } from "../middleware/review.js"
 import passport from "../config/passport.js"
 
 const router = express.Router()
 
-//get all reviews given park id
-//put a new review given a park id
 
-router.route("/user")
+router.route("/user") //I forgot what this does, too scared to touch it
     .get(getAllReviewsPark)
+
+router.route("/userreviews")
+    .get(passport.authenticate("jwt", {session: false}), getAllReviewsUser)
 
 router.route("/edit/:id")
     .get(getReviewById)

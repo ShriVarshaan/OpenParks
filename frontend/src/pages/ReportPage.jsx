@@ -127,7 +127,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
         return;
       }
 
-      const isInsideAnyPark = currentData.features.some((feature) =>
+      const isInsideAnyPark = currentData.features.find((feature) =>
         booleanPointInPolygon(clickedPt, feature)
       );
 
@@ -137,6 +137,7 @@ export default function ReportPage({ parkName = "this park", onSubmit }) {
       }
 
       const parkId = isInsideAnyPark?.properties?.id
+      console.log(parkId)
 
       if (markerRef.current) {
         markerRef.current.setLngLat([lng, lat]);

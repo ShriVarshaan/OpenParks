@@ -28,6 +28,7 @@ export const createNewReport = async (req, res) => {
 
         const [lng, lat] = req.body.location.coordinates
 
+
         const report = await prisma.$executeRaw`
             INSERT INTO public."SafetyReport" (
                 user_id,
@@ -37,7 +38,7 @@ export const createNewReport = async (req, res) => {
                 heading
             )VALUES(
                 ${Number(userId)},
-                ${Number(req.body.parkId)},
+                ${Number(req.body.park_id)},
                 ${req.body.description},
                 ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4236),
                 ${req.body.heading}

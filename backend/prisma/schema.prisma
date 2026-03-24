@@ -27,6 +27,7 @@ model Park {
   location          Unsupported("geography")
   amenities         ParkAmenity[]
   reviews           Review[]
+  SafetyReport      SafetyReport[]
   trails            trails[]
 }
 
@@ -47,6 +48,8 @@ model SafetyReport {
   created_at  DateTime                 @default(now())
   location    Unsupported("geography")
   heading     String?
+  park_id     Int?
+  Park        Park?                    @relation(fields: [park_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        User                     @relation(fields: [user_id], references: [id])
 }
 
@@ -57,6 +60,7 @@ model Review {
   content    String   @db.VarChar
   rating     Int
   created_at DateTime @default(now())
+  title      String?
   park       Park     @relation(fields: [park_id], references: [id])
   user       User     @relation(fields: [user_id], references: [id])
 }

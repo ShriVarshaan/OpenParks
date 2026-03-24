@@ -3,6 +3,8 @@ import {useNavigate} from "react-router"
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import API from "../api/axiosInstance.js"
+import booleanPointInPolygon from "@turf/boolean-point-in-polygon"
+import { point } from "@turf/helpers"
 
 const TRAIL_TYPES = [
   { label: 'Footpath',       color: '#5a9e4f' },
@@ -88,6 +90,21 @@ export default function MapRenderer() {
 
   const reportsMarkersRef = useRef([])
   const amenityMarkersRef = useRef([])
+
+  const parkPolygonsRef = useRef(null)
+  const [reviewPanel, setReviewPanel] = useState({ open: false, parkName: '', reviews: [], loading: false })
+
+  const openReviews = async (parkId, parkName) => {
+    setReviewPanel({ open: true, parkName, reviews: [], loading: true })
+    try {
+      const response = await API.get(`/api/reviews/${parkId}`)
+      setReviewPanel({ open: true, parkName, reviews: response.data, loading: false })
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err)
+      setReviewPanel({ open: true, parkName, reviews: [], loading: false })
+    }
+  }
+
 
   const applyContrastMapStyling = (isHighContrast) => {
     const map = mapRef.current
@@ -260,6 +277,9 @@ export default function MapRenderer() {
     map.on('load', () => {
       API.get('/api/parks')
         .then(r => {
+
+          parkPolygonsRef.current = r.data
+
           map.addSource('park-boundary', {
             type: 'geojson',
             data: r.data,
@@ -429,6 +449,24 @@ export default function MapRenderer() {
       applyContrastMapStyling(isHighContrast)
       
     })
+
+    map.on('click', (e) => {
+      const currentData = parkPolygonsRef.current
+      if (!currentData) return
+      const clickedPt = point([e.lngLat.lng, e.lngLat.lat])
+      const matchedPark = currentData.features.find(feature =>
+        booleanPointInPolygon(clickedPt, feature)
+      )
+      if (matchedPark) {
+        console.log('Park properties:', matchedPark.properties)
+        const parkName = matchedPark.properties?.name ?? 'Unknown Park'
+        const parkId = matchedPark.properties?.id
+        openReviews(parkId, parkName)
+      }
+    })
+
+    map.on('mouseenter', 'park-fill', () => { map.getCanvas().style.cursor = 'pointer' })
+    map.on('mouseleave', 'park-fill', () => { map.getCanvas().style.cursor = '' })
 
     mapRef.current = map
 
@@ -669,6 +707,51 @@ export default function MapRenderer() {
           </div>
         ))}
       </div>
+
+<div style={{
+  position: 'absolute', top: 0, right: 0, height: '100%', zIndex: 110,
+  width: 320, background: '#fff',
+  boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+  transform: reviewPanel.open ? 'translateX(0)' : 'translateX(100%)',
+  transition: 'transform 0.3s ease',
+  display: 'flex', flexDirection: 'column',
+  fontFamily: 'Arial, sans-serif',
+}}>
+  <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #eee', background: '#2d5a27' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <p style={{ margin: 0, fontSize: 11, color: '#c8e6c0', textTransform: 'uppercase', letterSpacing: 1 }}>Reviews</p>
+        <h2 style={{ margin: '2px 0 0', fontSize: 17, color: '#fff' }}>{reviewPanel.parkName}</h2>
+      </div>
+      <button
+        onClick={() => setReviewPanel(p => ({ ...p, open: false }))}
+        style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+
+  <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+    {reviewPanel.loading && (
+      <p style={{ color: '#999', fontSize: 14, textAlign: 'center', marginTop: 40 }}>Loading reviews...</p>
+    )}
+    {!reviewPanel.loading && reviewPanel.reviews.length === 0 && (
+      <p style={{ color: '#999', fontSize: 14, textAlign: 'center', marginTop: 40 }}>No reviews yet for this park.</p>
+    )}
+    {!reviewPanel.loading && reviewPanel.reviews.map((review, i) => (
+      <div key={review.id ?? i} style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 14, marginBottom: 14 }}>
+        <div style={{ fontSize: 14, color: '#f5a623', marginBottom: 4 }}>
+          {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+        </div>
+        {review.title && (
+          <p style={{ margin: '0 0 4px', fontWeight: 'bold', fontSize: 14, color: '#111' }}>{review.title}</p>
+        )}
+        <p style={{ margin: '0 0 6px', fontSize: 13, color: '#444', lineHeight: 1.5 }}>{review.content}</p>
+      </div>
+    ))}
+  </div>
+</div>
 
       {/* Map */}
       <div

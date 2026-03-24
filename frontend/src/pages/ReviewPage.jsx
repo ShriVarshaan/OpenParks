@@ -159,7 +159,10 @@ export default function ReviewPage({ onSubmit }) {
       const payload = {
         rating: parseInt(form.rating),
         title: form.title,
-        content: form.body
+        content: form.body,   // <-- change body to content
+        park_id: form.parkId,   // <-- use parkId instead of location
+        latitude: lat,
+        longitude: lng,
       };
  
       //backend

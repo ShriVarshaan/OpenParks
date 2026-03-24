@@ -66,7 +66,7 @@ describe("reviewController - addReviewPark", () => {
 
   test("returns 404 if park does not exist", async () => {
     const req = {
-      params: { id: "1" },
+      params: { parkId: "1" },
       body: { content: "Nice", rating: "5" },
       user: { id: 10 },
     };
@@ -82,7 +82,7 @@ describe("reviewController - addReviewPark", () => {
 
   test("creates a review for a valid park", async () => {
     const req = {
-      params: { id: "1" },
+      params: { parkId: "1" },
       body: { content: "Nice park", rating: "5" },
       user: { id: 10 },
     };
@@ -119,7 +119,7 @@ describe("reviewController - addReviewPark", () => {
 
   test("returns 400 if create review throws", async () => {
     const req = {
-      params: { id: "1" },
+      params: { parkId: "1" },
       body: { content: "Nice park", rating: "5" },
       user: { id: 10 },
     };

@@ -54,7 +54,6 @@ describe("parkController - getAllParks", () => {
           properties: {
             id: 1,
             name: "Central Park",
-            terrain_data: undefined,
             mobility_data: undefined,
             maintenance_stats: undefined,
           },
@@ -65,7 +64,6 @@ describe("parkController - getAllParks", () => {
           properties: {
             id: 2,
             name: "Hyde Park",
-            terrain_data: undefined,
             mobility_data: undefined,
             maintenance_stats: undefined,
           },
@@ -100,7 +98,6 @@ describe("parkController - getParkById", () => {
       {
         id: 1,
         name: "Central Park",
-        terrain_data: "Flat",
         mobility_data: "Wheelchair accessible",
         maintenance_stats: "Good",
         geometry: { type: "Point", coordinates: [1, 2] },
@@ -116,7 +113,6 @@ describe("parkController - getParkById", () => {
       properties: {
         id: 1,
         name: "Central Park",
-        terrain_data: "Flat",
         mobility_data: "Wheelchair accessible",
         maintenance_stats: "Good",
       },

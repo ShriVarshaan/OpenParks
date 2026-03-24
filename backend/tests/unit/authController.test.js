@@ -24,6 +24,18 @@ jest.unstable_mockModule("bcrypt", () => ({
   },
 }));
 
+jest.unstable_mockModule("../../src/controllers/sendVerification.js", () => ({
+  sendVerification: jest.fn(),
+}));
+
+jest.unstable_mockModule("nodemailer", () => ({
+  default: {
+    createTransport: jest.fn().mockReturnValue({
+      sendMail: jest.fn(),
+    }),
+  },
+}));
+
 jest.unstable_mockModule("jsonwebtoken", () => ({
   default: {
     sign: mockSign,
@@ -161,6 +173,7 @@ describe("authController - login", () => {
       id: 1,
       email: "test@example.com",
       password: "hashedPassword",
+      validated: true,
     });
     mockCompare.mockResolvedValue(false);
 
@@ -184,6 +197,7 @@ describe("authController - login", () => {
       id: 1,
       email: "test@example.com",
       password: "hashedPassword",
+      validated: true,
     });
     mockCompare.mockResolvedValue(true);
     mockSign.mockReturnValue("login-token");

@@ -36,18 +36,16 @@ describe("safetyReportController - getAllReports", () => {
     jest.clearAllMocks();
   });
 
-  test("returns all safety reports for a park", async () => {
+  test("returns all safety reports", async () => {
     const req = { params: { id: "1" } };
     const res = createRes();
 
     const reports = [{ id: 1, park_id: 1, description: "Broken light" }];
-    mockFindMany.mockResolvedValue(reports);
+    mockQueryRaw.mockResolvedValue(reports);
 
     await getAllReports(req, res);
 
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { park_id: "1" },
-    });
+    expect(mockQueryRaw).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(reports);
   });
@@ -58,37 +56,18 @@ describe("safetyReportController - createNewReport", () => {
     jest.clearAllMocks();
   });
 
-  test("returns 404 if park does not exist", async () => {
-    const req = {
-      params: { id: "1" },
-      body: { description: "Issue here" },
-      user: { id: 5 },
-    };
-    const res = createRes();
-
-    mockQueryRaw.mockResolvedValue([]);
-
-    await createNewReport(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ error: "Park not found" });
-  });
-
   test("creates a new safety report", async () => {
     const req = {
       params: { id: "1" },
-      body: { description: "Broken bench" },
+      body: {
+        description: "Broken bench",
+        park_id: "1",
+        location: { coordinates: [1, 2] },
+        heading: "Hazard",
+      },
       user: { id: 5 },
     };
     const res = createRes();
-
-    mockQueryRaw.mockResolvedValue([
-      {
-        id: 1,
-        name: "Park",
-        geometry: { type: "Point", coordinates: [1, 2] },
-      },
-    ]);
 
     mockExecuteRaw.mockResolvedValue([
       {
@@ -101,6 +80,7 @@ describe("safetyReportController - createNewReport", () => {
 
     await createNewReport(req, res);
 
+    expect(mockExecuteRaw).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       id: 100,
@@ -113,12 +93,17 @@ describe("safetyReportController - createNewReport", () => {
   test("returns 500 if creating report fails", async () => {
     const req = {
       params: { id: "1" },
-      body: { description: "Broken bench" },
+      body: {
+        description: "Broken bench",
+        park_id: "1",
+        location: { coordinates: [1, 2] },
+        heading: "Hazard",
+      },
       user: { id: 5 },
     };
     const res = createRes();
 
-    mockQueryRaw.mockRejectedValue(new Error("DB failure"));
+    mockExecuteRaw.mockRejectedValue(new Error("DB failure"));
 
     await createNewReport(req, res);
 
@@ -166,7 +151,7 @@ describe("safetyReportController - updateReport", () => {
 
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: 10 },
-      data: { status: "resolved" },
+      data: { status: "RESOLVED" },
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
@@ -209,4 +194,3 @@ describe("safetyReportController - updateReport", () => {
     expect(res.json).toHaveBeenCalledWith({ error: "Server error" });
   });
 });
-

@@ -197,9 +197,9 @@ export default function MapRenderer() {
 
   function buildReportPopupHTML(report) {
     return `
-      <div style="padding: 5px; font-family: sans-serif;">
+      <div style="padding: 5px; font-family: sans-serif; word-wrap: break-word; overflow-wrap: break-word; max-width: 220px;">
         <b style="color: #2d6a4f;">${report.heading}</b>
-        <p style="margin: 4px 0 6px; font-size: 12px; color: #444;">${report.description}</p>
+        <p style="margin: 4px 0 6px; font-size: 12px; color: #444; word-wrap: break-word; overflow-wrap: break-word;">${report.description}</p>
         ${isLoggedIn ? 
           `<button
             onclick="window.__resolveReport('${report.id}', this)"
@@ -498,7 +498,7 @@ export default function MapRenderer() {
 
           console.log(report)
           
-          const popup = new maplibregl.Popup({ offset: 25 })
+          const popup = new maplibregl.Popup({ offset: 25, maxWidth: '240px' })
             .setHTML(buildReportPopupHTML(report))
 
           const marker = new maplibregl.Marker({ color: "#e63946" })
@@ -748,7 +748,7 @@ export default function MapRenderer() {
     </div>
   </div>
 
-  <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+  <div style={{ flex: 1, overflowY: 'auto', padding: 16, overflowX: 'hidden' }}>
     {reviewPanel.loading && (
       <p style={{ color: '#999', fontSize: 14, textAlign: 'center', marginTop: 40 }}>Loading reviews...</p>
     )}
@@ -763,7 +763,7 @@ export default function MapRenderer() {
         {review.title && (
           <p style={{ margin: '0 0 4px', fontWeight: 'bold', fontSize: 14, color: '#111' }}>{review.title}</p>
         )}
-        <p style={{ margin: '0 0 6px', fontSize: 13, color: '#444', lineHeight: 1.5 }}>{review.content}</p>
+        <p style={{ margin: '0 0 6px', fontSize: 13, color: '#444', lineHeight: 1.5, wordWrap: 'break-word', overflowWrap: 'break-word' }}>{review.content}</p>
       </div>
     ))}
   </div>

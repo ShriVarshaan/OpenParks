@@ -268,7 +268,7 @@ const styles = {
   },
   itemTitle: { margin: "0 0 2px", fontWeight: "bold", fontSize: 14, color: "#111" },
   itemSub: { margin: 0, fontSize: 12, color: "#999" },
-  itemBody: { margin: 0, fontSize: 13, color: "#555", lineHeight: 1.5 },
+  itemBody: { margin: 0, fontSize: 13, color: "#555", lineHeight: 1.5, wordWrap: "break-word", overflowWrap: "break-word" },
   statusPill: {
     fontSize: 12,
     padding: "3px 10px",

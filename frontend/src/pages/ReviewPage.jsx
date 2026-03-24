@@ -164,7 +164,8 @@ export default function ReviewPage({ onSubmit }) {
         latitude: lat,
         longitude: lng,
       };
- 
+      
+      console.log(form.parkId)
       //backend
       const response = await API.post(`/api/reviews/${form.parkId}`, payload);
  

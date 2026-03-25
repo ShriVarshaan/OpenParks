@@ -57,6 +57,17 @@ describe("reviewController - getAllReviewsPark", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(reviews);
   });
+  test("returns 500 on a database error", async () => {
+    const req = { params: { id: "1" } };
+    const res = createRes();
+
+    mockFindMany.mockRejectedValue(new Error("DB error"));
+
+    await getAllReviewsPark(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
+  });
 });
 
 describe("reviewController - addReviewPark", () => {
@@ -117,7 +128,7 @@ describe("reviewController - addReviewPark", () => {
     });
   });
 
-  test("returns 400 if create review throws", async () => {
+  test("returns 500 if create review throws", async () => {
     const req = {
       params: { parkId: "1" },
       body: { content: "Nice park", rating: "5" },
@@ -126,12 +137,12 @@ describe("reviewController - addReviewPark", () => {
     const res = createRes();
 
     mockFindUnique.mockResolvedValue({ id: 1 });
-    mockCreate.mockRejectedValue(new Error("Create failed"));
+    mockCreate.mockRejectedValue(new Error("DB error"));
 
     await addReviewPark(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
   });
 });
 
@@ -159,6 +170,17 @@ describe("reviewController - getAllReviewsUser", () => {
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(reviews);
+  });
+  test("returns 500 on a database error", async () => {
+    const req = { user: { id: "1" } };
+    const res = createRes();
+
+    mockFindMany.mockRejectedValue(new Error("DB error"));
+
+    await getAllReviewsUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
   });
 });
 
@@ -190,6 +212,17 @@ describe("reviewController - getReviewById", () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(review);
+  });
+  test("returns 500 on a database error", async () => {
+    const req = { params: { id: "1" } };
+    const res = createRes();
+
+    mockFindUnique.mockRejectedValue(new Error("DB error"));
+
+    await getReviewById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
   });
 });
 
@@ -234,6 +267,17 @@ describe("reviewController - updateReview", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({ message: "Updated successfully" });
   });
+  test("returns 500 on a database error", async () => {
+    const req = { params: { id: "1" } };
+    const res = createRes();
+
+    mockFindUnique.mockRejectedValue(new Error("DB error"));
+
+    await getReviewById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
+  });
 });
 
 describe("reviewController - deleteReview", () => {
@@ -272,5 +316,16 @@ describe("reviewController - deleteReview", () => {
       where: { id: 1 },
     });
     expect(res.status).toHaveBeenCalledWith(204);
+  });
+  test("returns 500 on a database error", async () => {
+    const req = { params: { id: "1" } };
+    const res = createRes();
+
+    mockFindUnique.mockRejectedValue(new Error("DB error"));
+
+    await getReviewById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
   });
 });

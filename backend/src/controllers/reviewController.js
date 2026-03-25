@@ -25,7 +25,7 @@ export const addReviewPark = async (req, res, next) => {
             }})
         return res.status(201).json(review)
     } catch (err){
-        return res.status(400).json(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 

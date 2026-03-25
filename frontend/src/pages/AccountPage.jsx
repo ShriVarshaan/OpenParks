@@ -71,8 +71,7 @@ export default function AccountPage() {
  
   return (
     <div style={styles.page}>
-      <div style={styles.container}>
- 
+      <div style={styles.container}>  
         {/* Profile card */}
         <div style={styles.card}>
           <h1 style={styles.title}>OpenParks</h1>

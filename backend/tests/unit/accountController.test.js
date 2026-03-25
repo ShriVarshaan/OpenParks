@@ -21,8 +21,6 @@ const createRes = () => {
   return res;
 };
 
-// ─── getUser ────────────────────────────────────────────────────────────────
-
 describe("userController - getUser", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -67,8 +65,6 @@ describe("userController - getUser", () => {
     expect(res.json).toHaveBeenCalledWith(dbError);
   });
 });
-
-// ─── deleteUser ──────────────────────────────────────────────────────────────
 
 describe("userController - deleteUser", () => {
   beforeEach(() => {

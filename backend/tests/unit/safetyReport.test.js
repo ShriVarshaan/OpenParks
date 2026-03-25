@@ -22,6 +22,8 @@ const {
   getAllReports,
   createNewReport,
   updateReport,
+  getUserReports,
+  getAllReportsHeatmap
 } = await import("../../src/controllers/safetyReport.js");
 
 const createRes = () => {
@@ -48,6 +50,68 @@ describe("safetyReportController - getAllReports", () => {
     expect(mockQueryRaw).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(reports);
+  });
+  test("returns 500 on a database error", async () => {
+    const req = { params: { reportname: "hazard" } };
+    const res = createRes();
+
+    mockQueryRaw.mockRejectedValue(new Error("DB error"));
+
+    await getAllReports(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
+  });
+});
+
+describe ("safetyReportController - getUserReports", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  test("returns 200 and reports for a valid user", async () => {
+    const req = { user: { id: "1" } };
+    const res = createRes();
+
+    const reports = [
+        { id: 1, user_id: 1, park_id: 1, description: "Broken fence", Park: { name: "Hyde Park" } },
+        { id: 2, user_id: 1, park_id: 2, description: "Slippery path", Park: { name: "Regent's Park" } },
+    ];
+
+    mockFindMany.mockResolvedValue(reports);
+
+    await getUserReports(req, res);
+
+    expect(mockFindMany).toHaveBeenCalledWith({
+        where: { user_id: 1, park_id: { not: null } },
+        include: { Park: { select: { name: true } } },
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(reports);
+  });
+
+  test("returns 200 and empty array when user has no reports", async () => {
+    const req = { user: { id: "1" } };
+    const res = createRes();
+
+    mockFindMany.mockResolvedValue([]);
+
+    await getUserReports(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("returns 500 on a database error", async () => {
+    const req = { user: { id: "1" } };
+    const res = createRes();
+
+    mockFindMany.mockRejectedValue(new Error("DB error"));
+
+    await getUserReports(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
   });
 });
 
@@ -192,5 +256,53 @@ describe("safetyReportController - updateReport", () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Server error" });
+  });
+});
+
+describe("safetyReportController - getAllReportsHeatmap", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("returns 200 and reports for heatmap", async () => {
+    const req = {};
+    const res = createRes();
+
+    const reports = [
+        { id: 1, heading: "hazard", location: { type: "Point", coordinates: [-0.1276, 51.5074] } },
+        { id: 2, heading: "vandalism", location: { type: "Point", coordinates: [-0.0922, 51.5152] } },
+    ];
+
+    mockQueryRaw.mockResolvedValue(reports);
+
+    await getAllReportsHeatmap(req, res);
+
+    expect(mockQueryRaw).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(reports);
+  });
+
+  test("returns 200 and empty array when no open reports exist", async () => {
+    const req = {};
+    const res = createRes();
+
+    mockQueryRaw.mockResolvedValue([]);
+
+    await getAllReportsHeatmap(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("returns 500 on a database error", async () => {
+    const req = {};
+    const res = createRes();
+
+    mockQueryRaw.mockRejectedValue(new Error("DB error"));
+
+    await getAllReportsHeatmap(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
   });
 });

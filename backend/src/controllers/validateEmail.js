@@ -53,7 +53,6 @@ export const checkValidOTP = async(req,res) =>{
         })
     }
     catch(error){
-        console.log(error)
         return res.status(401).json({message: "Invalid Password"})
     }   
 }

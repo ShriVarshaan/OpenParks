@@ -21,10 +21,9 @@ export const getAllParks = async (req, res) => {
             ORDER BY id
         `;
         const features = result.map(rowToFeature);
-        res.status(200).json({ type: "FeatureCollection", features });
+        return res.status(200).json({ type: "FeatureCollection", features });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to fetch parks" });
+        return res.status(500).json({ error: "Failed to fetch parks" });
     }
 };
 
@@ -44,9 +43,8 @@ export const getParkById = async (req, res) => {
         if (!park) {
             return res.status(404).json({ error: "Park not found" });
         }
-        res.status(200).json(rowToFeature(park));
+        return res.status(200).json(rowToFeature(park));
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to fetch park" });
+        return res.status(500).json({ error: "Failed to fetch park" });
     }
 };

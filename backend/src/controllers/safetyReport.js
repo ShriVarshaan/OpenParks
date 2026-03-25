@@ -16,9 +16,9 @@ export const getAllReports = async (req, res) => {
             FROM "SafetyReport"
             WHERE heading = ${req.params.reportname} AND status='OPEN';
         `
-        res.status(200).json(reports)
+        return res.status(200).json(reports)
     } catch (err){
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 
@@ -27,7 +27,7 @@ export const getUserReports = async (req, res) => {
         const reports = await prisma.safetyReport.findMany({where: {user_id: Number(req.user.id), park_id: {not: null}}, include: {Park: {select: {name: true}}}})
         return res.status(200).json(reports)
     } catch (err){
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 
@@ -57,7 +57,6 @@ export const createNewReport = async (req, res) => {
 
         return res.status(201).json(report[0])
     } catch (err){
-        console.log(err)
         return res.status(500).json({ error: "Internal server error" })
     }
 }
@@ -71,12 +70,12 @@ export const updateReport = async (req, res) => {
         }
 
         const updatedReport = await prisma.safetyReport.update({where: {id: Number(req.params.reportid)}, data:{status: "RESOLVED"}})
-        res.status(200).json(updatedReport)
+        return res.status(200).json(updatedReport)
     } catch (err) {
         if (err.code && err.code === "P2002"){
-            res.status(400).json({error: "Invalid error code"})
+            return res.status(400).json({error: "Invalid error code"})
         } else{
-            res.status(500).json({error: "Server error"})
+            return res.status(500).json({error: "Server error"})
         }
     }
 }
@@ -90,9 +89,8 @@ export const getAllReportsHeatmap = async (req, res) => {
             FROM "SafetyReport"
             WHERE status='OPEN';
         `
-        res.status(200).json(reports)
+        return res.status(200).json(reports)
     } catch (err){
-        console.log(err)
-        res.status(500).json({error: "Server error"})
+        return res.status(500).json({message: "Internal server error"})
     }
 }

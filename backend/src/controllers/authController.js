@@ -8,7 +8,6 @@ dotenv.config()
 
 export const signup = async (req, res, next) =>{
     try{
-        console.log(req.body)
         const user = await prisma.user.findUnique({where: {email: req.body.email}})
         if (user){
             return res.status(409).json({message: "User exists already"})
@@ -38,7 +37,6 @@ export const signup = async (req, res, next) =>{
             user: { id: newUser.id, email: newUser.email }
         })
     } catch (err){
-        console.log(err)
         return res.status(500).json({message: "Sign up unsuccessful"})
     }
 }
@@ -72,7 +70,6 @@ export const login = async(req, res, next) => {
         user: { id: user.id, email: user.email }
     })
     } catch (err){
-        console.log(err)
         return res.status(401).json({message: "Invalid credentials"})
     }
 }

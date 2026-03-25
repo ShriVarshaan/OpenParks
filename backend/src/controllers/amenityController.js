@@ -5,7 +5,7 @@ export const getAmenities = async (req, res) => {
         const amenities = await prisma.parkAmenity.findMany({where: {park_id: Number(req.params.id)}})
         return res.status(200).json(amenities)
     } catch (err) {
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 
@@ -36,6 +36,6 @@ export const getAllAmenities = async (req, res) => {
         }))
         return res.status(200).json(geojson)
     } catch (err) {
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }

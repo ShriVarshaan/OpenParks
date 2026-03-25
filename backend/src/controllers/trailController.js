@@ -30,10 +30,9 @@ export const getTrailsByParkId = async (req, res) => {
             WHERE park_id = ${Number(parkId)}
         `;
         const features = result.map(trailRowToFeature);
-        res.status(200).json({ type: "FeatureCollection", features });
+        return res.status(200).json({ type: "FeatureCollection", features });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to fetch trails" });
+        return res.status(500).json({ error: "Failed to fetch trails" });
     }
 };
 
@@ -52,9 +51,8 @@ export const getAllTrails = async (req, res) => {
             ORDER BY id
         `;
         const features = result.map(trailRowToFeature);
-        res.status(200).json({ type: "FeatureCollection", features });
+        return res.status(200).json({ type: "FeatureCollection", features });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to fetch trails" });
+        return res.status(500).json({ error: "Failed to fetch trails" });
     }
 };

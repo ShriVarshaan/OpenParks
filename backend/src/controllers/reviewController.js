@@ -6,7 +6,7 @@ export const getAllReviewsPark = async (req, res, next) => {
         const reviews = await prisma.review.findMany({where: {park_id: Number(req.params.parkId)}})
         return res.status(200).json(reviews)
     }catch (err){
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 
@@ -25,7 +25,6 @@ export const addReviewPark = async (req, res, next) => {
             }})
         return res.status(201).json(review)
     } catch (err){
-        console.log(err)
         return res.status(400).json(err)
     }
 }
@@ -36,7 +35,7 @@ export const getAllReviewsUser = async (req, res) => {
         const reviews = await prisma.review.findMany({where: {user_id: Number(req.user.id)}, include: {park: {select: {name: true}}}})
         return res.status(200).json(reviews)
     } catch (err){
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 
@@ -48,7 +47,7 @@ export const getReviewById = async (req, res) => {
         }
         return res.status(200).json(review)
     } catch (err){
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 
@@ -61,7 +60,7 @@ export const updateReview = async (req, res) => {
         const updatedReview = await prisma.review.update({where: {id: Number(req.params.id)}, data: req.body})
         return res.status(200).json({message: "Updated successfully"})
     } catch (err){
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }
 
@@ -75,6 +74,6 @@ export const deleteReview = async (req, res, next) => {
 
         return res.status(204)
     } catch (err) {
-        console.log(err)
+        return res.status(500).json({message: "Internal server error"})
     }
 }

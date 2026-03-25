@@ -6,7 +6,7 @@ afterEach(() => {
   cleanup()
 })
 
-const loaclStorageMock = (() => {
+const localStorageMock = (() => {
   let store = {}
   return {
     getItem: (key) => store[key] || null,

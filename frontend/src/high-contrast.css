@@ -193,18 +193,18 @@ body {
 
 .high-contrast-mode .map-container-wrapper,
 .high-contrast-mode .map-container-wrapper * {
-    background-color: transparent !important;
+    background-color: #000000 !important;
 }
 
 .high-contrast-mode.high-contrast-mode .map-container-wrapper {
-    background-color: transparent !important;
+    background-color: #000000 !important;
 }
 
 body.high-contrast-mode .map-container-wrapper,
 body.high-contrast-mode .map-container-wrapper *,
 body.high-contrast-mode .map-container-wrapper .maplibregl-map,
 body.high-contrast-mode .map-container-wrapper .maplibregl-canvas {
-    background-color: transparent !important;
+    background-color: #000000 !important;
 }
 
 /* Navbar */

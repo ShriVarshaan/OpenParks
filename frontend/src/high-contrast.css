@@ -55,7 +55,7 @@
 
 .high-contrast-mode {
     --bg-cream: #000000;
-    --text-dark: #ffffff;
+    --text-dark: #ffff00;
     --text-mid: #e8e8e8;
     --park-green: #00ffff;
     --park-light: #5fffff;
@@ -86,7 +86,7 @@
 .high-contrast-mode nav-pill {
     background: #222222;
     border: 2px solid #ffff00;
-    color: #ffffff;
+    color: #ffff00;
 }
 
 .high-contrast-mode nav-pill:hover, .high-contrast-mode .nav-pill.active {

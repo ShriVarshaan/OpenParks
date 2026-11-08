@@ -45,14 +45,14 @@
 ### Task 1.1: Branch, housekeeping, and Docker Compose
 
 **Files:**
-- Create: `docker-compose.yml`, `docker/initdb/20-test-db.sql`
+- Create: `docker-compose.yml`, `docker/initdb/20-openparks-init.sql`
 - Modify: `.gitignore`. Add `.superpowers/` and `.env`. Change `backend/.gitignore`'s `/src/generated/prisma` to `/src/generated`.
 - Commit the already-present `.claude/skills/`, `skills-lock.json`, `CLAUDE.md`, and `docs/superpowers/`.
 
 - [ ] **Step 1:** `git checkout -b feature/local-setup`
 - [ ] **Step 2: Write `docker-compose.yml`.**
   - Service `db`: `postgis/postgis:16-3.4`. Env `POSTGRES_USER/PASSWORD/DB=openparks`. Port `${OPENPARKS_DB_PORT:-5433}:5432`. Named volume `openparks-db:/var/lib/postgresql/data`. Healthcheck `pg_isready -U openparks -d openparks`, every 5s.
-  - Also mount only the file `./docker/initdb/20-test-db.sql` into `/docker-entrypoint-initdb.d/` on `db` (mounting the folder would hide the image's PostGIS init script), with `docker/initdb/20-test-db.sql` containing `CREATE DATABASE openparks_test TEMPLATE template_postgis;`. This is used by Task 2.3.
+  - Also mount only the file `./docker/initdb/20-openparks-init.sql` into `/docker-entrypoint-initdb.d/` on `db` (mounting the folder would hide the image's PostGIS init script), with `docker/initdb/20-openparks-init.sql` which drops the image's pre-installed extensions (Prisma's migration owns `postgis`) and runs `CREATE DATABASE openparks_test;`. This is used by Task 2.3.
   - Service `mail`: `axllent/mailpit`. Ports `1025:1025` and `8025:8025`. Env `MP_SMTP_AUTH_ACCEPT_ANY=1` and `MP_SMTP_AUTH_ALLOW_INSECURE=1`.
 - [ ] **Step 3: Verify.** Run `docker compose up -d && docker compose ps`. Expected: `db` is `healthy` and `mail` is `running`. Run `docker compose exec db psql -U openparks -c "SELECT postgis_version();"`. Expected: a row starting with `3.4`. Run `docker compose exec db psql -U openparks -lqt | grep openparks_test`. Expected: one line.
 - [ ] **Step 4: Commit.** `git add docker-compose.yml docker .gitignore backend/.gitignore .claude skills-lock.json CLAUDE.md docs && git commit -m "chore: add docker compose (postgis + mailpit), skills, plan docs"`
@@ -126,7 +126,7 @@
 - [ ] **Step 3: Generate the migration.**
   1. `cp .env.example .env`
   2. `npx prisma migrate dev --name init --create-only`
-  3. Append GiST indexes to the generated SQL: `CREATE INDEX park_location_gix ON "Park" USING GIST (location);`, and the same for `"ParkAmenity"(location)`, `trails(geom)` and `"SafetyReport"(location)`.
+  3. Declare GiST indexes in the schema (`@@index([location], type: Gist)` on Park, ParkAmenity, SafetyReport; `@@index([geom], type: Gist)` on trails) so Prisma generates and tracks them.
   4. Run `npx prisma migrate dev`.
 - [ ] **Step 4: Verify.** `docker compose exec db psql -U openparks -c '\dt'`. Expected tables: `User`, `Park`, `ParkAmenity`, `SafetyReport`, `Review`, `trails`, `OneTimePasswords`, `_prisma_migrations`.
 - [ ] **Step 5: Verify the API boots.**
@@ -217,7 +217,7 @@
   - **Amenities:** `park_id` is the park where `ST_Covers(park.location, point::geography)`. Skip amenities in no park. Use `ON CONFLICT (osm_type, osm_id) DO UPDATE`.
   - **Demo data:** upsert the demo user (Global Constraints). If that user has no reviews, insert 3 reviews on the park named `Cannon Hill Park`, rated 5, 4 and 5, with titles "Lovely lake walk", "Great for kids" and "Busy at weekends".
 
-- **Test DB isolation:** the tests never touch the dev DB. Task 1.1 adds `docker/initdb/20-test-db.sql` (`CREATE DATABASE openparks_test TEMPLATE template_postgis;`), mounted into `/docker-entrypoint-initdb.d/`. The test file builds `testUrl = process.env.TEST_DATABASE_URL ?? "postgresql://openparks:openparks@localhost:5433/openparks_test"`. It sets `process.env.DATABASE_URL = testUrl` before `await import`-ing `src/config/prisma.js`, and runs `execSync("npx prisma migrate reset --force --skip-seed", { env: { ...process.env, DATABASE_URL: testUrl } })` in `beforeAll`.
+- **Test DB isolation:** the tests never touch the dev DB. Task 1.1 adds `docker/initdb/20-openparks-init.sql` (drops the image's pre-installed PostGIS extensions so Prisma owns them, then `CREATE DATABASE openparks_test;`), mounted into `/docker-entrypoint-initdb.d/`. The test file builds `testUrl = process.env.TEST_DATABASE_URL ?? "postgresql://openparks:openparks@localhost:5433/openparks_test"`. It sets `process.env.DATABASE_URL = testUrl` before `await import`-ing `src/config/prisma.js`, and runs `execSync("npx prisma migrate reset --force --skip-seed", { env: { ...process.env, DATABASE_URL: testUrl } })` in `beforeAll`.
 
 - [ ] **Step 1: Write the failing DB tests**, using the fixtures:
   - `seeds fixture parks, trails, amenities`: the counts match the fixtures, and `SELECT ST_SRID(location::geometry) FROM "Park"` is all `4326`

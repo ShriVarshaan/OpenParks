@@ -38,21 +38,24 @@ export const createNewReport = async (req, res) => {
         const [lng, lat] = req.body.location.coordinates
 
 
-        const report = await prisma.$executeRaw`
+        // $queryRaw (not $executeRaw) so RETURNING gives back the row; location is
+        // returned as GeoJSON because the raw geography value is not JSON-serialisable.
+        const report = await prisma.$queryRaw`
             INSERT INTO public."SafetyReport" (
                 user_id,
                 park_id,
-                description, 
+                description,
                 location,
                 heading
             )VALUES(
                 ${Number(userId)},
                 ${Number(req.body.park_id)},
                 ${req.body.description},
-                ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4236),
+                ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
                 ${req.body.heading}
             )
-            RETURNING *
+            RETURNING id, user_id, park_id, description, image, status, created_at, heading,
+                ST_AsGeoJSON(location)::json AS location
             `;
 
         return res.status(201).json(report[0])

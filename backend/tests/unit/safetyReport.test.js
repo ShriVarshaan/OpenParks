@@ -133,7 +133,7 @@ describe("safetyReportController - createNewReport", () => {
     };
     const res = createRes();
 
-    mockExecuteRaw.mockResolvedValue([
+    mockQueryRaw.mockResolvedValue([
       {
         id: 100,
         user_id: 5,
@@ -144,7 +144,7 @@ describe("safetyReportController - createNewReport", () => {
 
     await createNewReport(req, res);
 
-    expect(mockExecuteRaw).toHaveBeenCalled();
+    expect(mockQueryRaw).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       id: 100,
@@ -167,7 +167,7 @@ describe("safetyReportController - createNewReport", () => {
     };
     const res = createRes();
 
-    mockExecuteRaw.mockRejectedValue(new Error("DB failure"));
+    mockQueryRaw.mockRejectedValue(new Error("DB failure"));
 
     await createNewReport(req, res);
 
@@ -175,6 +175,39 @@ describe("safetyReportController - createNewReport", () => {
     expect(res.json).toHaveBeenCalledWith({
       error: "Internal server error",
     });
+  });
+
+  const reportReq = () => ({
+    body: {
+      description: "Broken bench",
+      park_id: "1",
+      location: { type: "Point", coordinates: [-1.9, 52.45] },
+      heading: "Hazard",
+    },
+    user: { id: 5 },
+  });
+
+  test("stores the location in SRID 4326 (WGS 84 lng/lat)", async () => {
+    mockQueryRaw.mockResolvedValue([{ id: 7 }]);
+
+    await createNewReport(reportReq(), createRes());
+
+    const sql = mockQueryRaw.mock.calls[0][0].join("");
+    expect(sql).toContain("4326");
+    expect(sql).not.toContain("4236");
+    expect(mockQueryRaw.mock.calls[0].slice(1)).toEqual(expect.arrayContaining([-1.9, 52.45]));
+  });
+
+  test("returns the created row, with its location as GeoJSON", async () => {
+    mockQueryRaw.mockResolvedValue([{ id: 7 }]);
+    const res = createRes();
+
+    await createNewReport(reportReq(), res);
+
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
+    expect(mockQueryRaw.mock.calls[0][0].join("")).toContain("ST_AsGeoJSON(location)");
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({ id: 7 });
   });
 });
 

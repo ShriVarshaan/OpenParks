@@ -56,7 +56,7 @@ model SafetyReport {
   image       Bytes?
   status      ReportStatus             @default(OPEN)
   created_at  DateTime                 @default(now())
-  location    Unsupported("geography")
+  location    Unsupported("geography(Point,4326)")
   heading     String?
   park_id     Int?
   Park        Park?                    @relation(fields: [park_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

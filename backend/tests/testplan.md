@@ -201,8 +201,12 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
-| UT-SR-03 | Creates a new safety report with PostGIS geometry | Valid body with coordinates, `user.id: 5`, `$executeRaw` resolves | `status 201`, body: created report object | status 201  | PASS |
-| UT-SR-04 | Returns 500 if creation fails | `$executeRaw` rejects with DB failure | `status 500`, body: `{ error: 'Internal server error' }` | status 500 | PASS |
+| UT-SR-03 | Creates a new safety report with PostGIS geometry | Valid body with coordinates, `user.id: 5`, `$queryRaw` resolves | `status 201`, body: created report object | status 201  | PASS |
+| UT-SR-04 | Returns 500 if creation fails | `$queryRaw` rejects with DB failure | `status 500`, body: `{ error: 'Internal server error' }` | status 500 | PASS |
+| UT-SR-03a | Stores the report location in SRID 4326 | Body with `coordinates: [-1.9, 52.45]` | SQL passed to `$queryRaw` contains `4326`, not `4236`; values include `-1.9`, `52.45` | as expected | PASS |
+| UT-SR-03b | Returns the created row from `INSERT … RETURNING` | `$queryRaw` resolves `[{ id: 7 }]` | `$executeRaw` not called; SQL returns `ST_AsGeoJSON(location)`; `status 201`, body `{ id: 7 }` | as expected | PASS |
+| DB-SR-01 | Database rejects a report point that is not SRID 4326 (`tests/db/safetyReport.db.test.js`) | Raw insert with SRID 4236 into `openparks_test` | Insert rejected with an SRID error | rejected | PASS |
+| DB-SR-02 | A 4326 report point can be compared with park outlines | Raw insert with SRID 4326 inside the fixture Cannon Hill Park | `ST_Covers(park, report)` is true | true | PASS |
 
 #### 4.5.3 `updateReport()`
 
@@ -466,12 +470,12 @@ Integration tests run against the full Express application stack including authe
 #### 5.5.3 `createNewReport()`
 | ID | Scenario | Modules | Steps | Expected | Actual Result | Status |
 |---|---|---|---|---|---|---|
-| UT-SR-12 | `createNewReport` calls `$executeRaw` once | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[mockReport]`; call `createNewReport` with valid body | `prisma.$executeRaw` called exactly once | `prisma.$executeRaw` was called exactly once | PASS |
-| UT-SR-13 | `createNewReport` returns 201 with the first element of the result | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[mockReport]`; call `createNewReport` | Response status 201; `res.json` called with `mockReport` | Response status 201; `res.json` called with `mockReport` | PASS |
-| UT-SR-14 | `createNewReport` returns 201 with `undefined` when `$executeRaw` returns an empty array | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[]`; call `createNewReport` | Response status 201; `res.json` called with `undefined` | Response status 201; `res.json` called with `undefined` | PASS |
-| UT-SR-15 | `createNewReport` correctly extracts `lng` and `lat` from `body.location.coordinates` | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[mockReport]`; call `createNewReport` with `location: { coordinates: [-1.9, 52.48] }` | Promise resolves without throwing; `$executeRaw` called once | Promise resolved without throwing; `$executeRaw` called once | PASS |
-| UT-SR-16 | `createNewReport` returns 500 on a `$executeRaw` failure | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to reject with `Error("Insert failed")`; call `createNewReport` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | PASS |
-| UT-SR-17 | `createNewReport` does not propagate thrown errors | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to reject with `Error("Timeout")`; await `createNewReport` | Promise resolves without throwing | Promise resolved without throwing | PASS |
+| UT-SR-12 | `createNewReport` calls `$queryRaw` once | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[mockReport]`; call `createNewReport` with valid body | `prisma.$queryRaw` called exactly once | `prisma.$queryRaw` was called exactly once | PASS |
+| UT-SR-13 | `createNewReport` returns 201 with the first element of the result | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[mockReport]`; call `createNewReport` | Response status 201; `res.json` called with `mockReport` | Response status 201; `res.json` called with `mockReport` | PASS |
+| UT-SR-14 | `createNewReport` returns 201 with `undefined` when `$queryRaw` returns an empty array | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[]`; call `createNewReport` | Response status 201; `res.json` called with `undefined` | Response status 201; `res.json` called with `undefined` | PASS |
+| UT-SR-15 | `createNewReport` correctly extracts `lng` and `lat` from `body.location.coordinates` | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[mockReport]`; call `createNewReport` with `location: { coordinates: [-1.9, 52.48] }` | Promise resolves without throwing; `$queryRaw` called once with `-1.9`, `52.48` and SRID `4326` | Promise resolved without throwing; `$queryRaw` called once with `-1.9`, `52.48` and SRID `4326` with `-1.9`, `52.48` and SRID `4326` | PASS |
+| UT-SR-16 | `createNewReport` returns 500 on a `$queryRaw` failure | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to reject with `Error("Insert failed")`; call `createNewReport` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | PASS |
+| UT-SR-17 | `createNewReport` does not propagate thrown errors | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to reject with `Error("Timeout")`; await `createNewReport` | Promise resolves without throwing | Promise resolved without throwing | PASS |
 
 #### 5.5.4 `updateReport()`
 

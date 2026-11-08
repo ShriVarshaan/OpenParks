@@ -178,17 +178,17 @@ describe("createNewReport", () => {
     });
 
     describe("201 – report created", () => {
-        it("calls $executeRaw once", async () => {
-            prisma.$executeRaw.mockResolvedValue([mockReport]);
+        it("calls $queryRaw once", async () => {
+            prisma.$queryRaw.mockResolvedValue([mockReport]);
             const res = buildRes();
 
             await createNewReport(req, res);
 
-            expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+            expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
         });
 
         it("returns 201 with the first element of the result", async () => {
-            prisma.$executeRaw.mockResolvedValue([mockReport]);
+            prisma.$queryRaw.mockResolvedValue([mockReport]);
             const res = buildRes();
 
             await createNewReport(req, res);
@@ -197,8 +197,8 @@ describe("createNewReport", () => {
             expect(res.json).toHaveBeenCalledWith(mockReport);
         });
 
-        it("returns 201 with undefined when $executeRaw returns an empty array", async () => {
-            prisma.$executeRaw.mockResolvedValue([]);
+        it("returns 201 with undefined when $queryRaw returns an empty array", async () => {
+            prisma.$queryRaw.mockResolvedValue([]);
             const res = buildRes();
 
             await createNewReport(req, res);
@@ -210,16 +210,19 @@ describe("createNewReport", () => {
 
     describe("coordinate destructuring", () => {
         it("extracts lng and lat from body.location.coordinates", async () => {
-            prisma.$executeRaw.mockResolvedValue([mockReport]);
+            prisma.$queryRaw.mockResolvedValue([mockReport]);
 
             await expect(createNewReport(req, buildRes())).resolves.not.toThrow();
-            expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+            expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+            const [strings, ...values] = prisma.$queryRaw.mock.calls[0];
+            expect(values).toEqual(expect.arrayContaining([-1.9, 52.48]));
+            expect(strings.join("")).toContain("4326");
         });
     });
 
     describe("500 – database error", () => {
-        it("returns 500 on a $executeRaw failure", async () => {
-            prisma.$executeRaw.mockRejectedValue(new Error("Insert failed"));
+        it("returns 500 on a $queryRaw failure", async () => {
+            prisma.$queryRaw.mockRejectedValue(new Error("Insert failed"));
             const res = buildRes();
 
             await createNewReport(req, res);
@@ -229,7 +232,7 @@ describe("createNewReport", () => {
         });
 
         it("does not throw — error is absorbed into the response", async () => {
-            prisma.$executeRaw.mockRejectedValue(new Error("Timeout"));
+            prisma.$queryRaw.mockRejectedValue(new Error("Timeout"));
 
             await expect(createNewReport(req, buildRes())).resolves.not.toThrow();
         });

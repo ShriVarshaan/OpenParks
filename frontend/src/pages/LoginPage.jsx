@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 // No err.response means the request never reached the backend (it is down, or the URL is wrong).
 const NETWORK_ERROR = "Cannot reach the server. Is the backend running?"
 const GENERIC_ERROR = "Something went wrong, please try again"
+const MAIL_UI_URL = import.meta.env.VITE_MAIL_UI_URL || "http://localhost:8025"
 
 export default function LoginPage({ onLogin }) {
   const navigate = useNavigate()
@@ -190,6 +191,16 @@ export default function LoginPage({ onLogin }) {
 
         <p style={styles.expiry}>⏱ Expires in 5 minutes</p>
 
+        {/* In local development, emails are caught by Mailpit instead of being delivered. */}
+        {import.meta.env.DEV && (
+          <p style={styles.devHint}>
+            Running locally? Your code is in the Mailpit inbox at{" "}
+            <a href={MAIL_UI_URL} target="_blank" rel="noreferrer" style={{ color: "#2d6a4f" }}>
+              {MAIL_UI_URL.replace(/^https?:\/\//, "")}
+            </a>
+          </p>
+        )}
+
         <button
           style={{
             ...styles.button,
@@ -365,6 +376,7 @@ const styles = {
     fontFamily: "'Courier New', monospace",
   },
   expiry: { fontSize: 12, color: "#aaa", margin: "0 0 20px" },
+  devHint: { fontSize: 12, color: "#666", background: "#f0f7f4", borderRadius: 8, padding: "8px 12px", margin: "-8px 0 20px" },
   button: {
     width: "100%",
     padding: "13px",

@@ -267,6 +267,30 @@ describe('LoginPage', () => {
     expect(toast.error).not.toHaveBeenCalledWith('Invalid user/email/password fields')
   })
 
+  const reachCodeScreen = async () => {
+    API.post.mockResolvedValueOnce({ data: { user: { id: 2 } } })
+    await submitSignup()
+    await screen.findByText('Check your email')
+  }
+
+  it('tells local developers where to find the code (Mailpit)', async () => {
+    await reachCodeScreen()
+
+    expect(screen.getByText(/Running locally\?/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'localhost:8025' })).toHaveAttribute('href', 'http://localhost:8025')
+  })
+
+  it('does not show the local mail hint in a production build', async () => {
+    vi.stubEnv('DEV', false)
+    try {
+      await reachCodeScreen()
+
+      expect(screen.queryByText(/Running locally\?/)).not.toBeInTheDocument()
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('submits registration request with username email and password', async () => {
     API.post.mockResolvedValueOnce({
       data: { token: 'reg-token-123', user: { id: 2, email: 'new@test.com' } }

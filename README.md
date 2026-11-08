@@ -180,4 +180,4 @@ The backend reads `backend/.env` (see `backend/.env.example`):
 | `CORS_ORIGINS` | Comma-separated allowed frontend origins | `http://localhost:5173,http://localhost:5174` |
 | `PORT` | API port | `3000` |
 
-The frontend reads `VITE_API_URL` from `frontend/.env` (default `http://localhost:3000`).
+The frontend reads `VITE_API_URL` from `frontend/.env` (default `http://localhost:3000`). In development the email-code screen links to the Mailpit inbox at `VITE_MAIL_UI_URL` (default `http://localhost:8025`); production builds never show it.

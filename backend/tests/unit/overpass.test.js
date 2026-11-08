@@ -1,0 +1,145 @@
+import { jest } from "@jest/globals";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { buildQueries, fetchOverpass } from "../../scripts/osm/overpass.js";
+import { runFetch } from "../../scripts/fetch-parks.js";
+
+const BBOX = [52.42, -1.96, 52.48, -1.86];
+
+const ok = (data) => ({ ok: true, status: 200, json: async () => data });
+
+const PARKS_RESPONSE = {
+  elements: [
+    {
+      type: "way",
+      id: 1,
+      tags: { leisure: "park", name: "A Park" },
+      nodes: [1, 2, 3, 1],
+      geometry: [
+        { lat: 52.44, lon: -1.91 },
+        { lat: 52.44, lon: -1.9 },
+        { lat: 52.45, lon: -1.9 },
+        { lat: 52.44, lon: -1.91 },
+      ],
+    },
+  ],
+};
+const TRAILS_RESPONSE = {
+  elements: [
+    {
+      type: "way",
+      id: 11,
+      tags: { highway: "footway" },
+      nodes: [1, 3],
+      geometry: [
+        { lat: 52.44, lon: -1.91 },
+        { lat: 52.45, lon: -1.9 },
+      ],
+    },
+  ],
+};
+const AMENITIES_RESPONSE = {
+  elements: [{ type: "node", id: 5, lat: 52.441, lon: -1.905, tags: { amenity: "bench" } }],
+};
+
+const config = { areas: [{ name: "Test", bbox: BBOX }], exclude: [] };
+
+let outDir;
+beforeEach(() => {
+  outDir = fs.mkdtempSync(path.join(os.tmpdir(), "openparks-fetch-"));
+});
+afterEach(() => {
+  fs.rmSync(outDir, { recursive: true, force: true });
+});
+
+describe("buildQueries", () => {
+  test("parks query selects named parks in the bbox with full geometry", () => {
+    const { parks } = buildQueries(BBOX);
+    expect(parks).toContain("(52.42,-1.96,52.48,-1.86)");
+    expect(parks).toContain("out geom");
+  });
+});
+
+describe("fetchOverpass", () => {
+  const noSleep = async () => {};
+
+  test("rejects with the HTTP status when Overpass stays rate-limited", async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 429 });
+    await expect(fetchOverpass("[out:json];", fetchImpl, { sleep: noSleep })).rejects.toThrow("Overpass HTTP 429");
+  });
+
+  test("retries a transient 502 and returns the later success", async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 502 })
+      .mockResolvedValueOnce(ok({ elements: [] }));
+
+    await expect(fetchOverpass("[out:json];", fetchImpl, { sleep: noSleep })).resolves.toEqual({ elements: [] });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  test("gives up after the configured number of retries", async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 504 });
+
+    await expect(fetchOverpass("[out:json];", fetchImpl, { retries: 2, sleep: noSleep })).rejects.toThrow(
+      "Overpass HTTP 504"
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  test("does not retry a client error such as 400", async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 400 });
+
+    await expect(fetchOverpass("[out:json];", fetchImpl, { sleep: noSleep })).rejects.toThrow("Overpass HTTP 400");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runFetch", () => {
+  test("writes parks, trails and amenities snapshots", async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(ok(PARKS_RESPONSE))
+      .mockResolvedValueOnce(ok(TRAILS_RESPONSE))
+      .mockResolvedValueOnce(ok(AMENITIES_RESPONSE));
+
+    const counts = await runFetch({ config, outDir, fetchImpl });
+
+    expect(counts).toEqual({ parks: 1, trails: 1, amenities: 1 });
+    const parks = JSON.parse(fs.readFileSync(path.join(outDir, "parks.geojson"), "utf8"));
+    expect(parks.features).toHaveLength(1);
+    expect(parks.features[0].properties).toEqual({ osm_type: "way", osm_id: "1", name: "A Park" });
+    expect(fs.existsSync(path.join(outDir, "trails.geojson"))).toBe(true);
+    expect(fs.existsSync(path.join(outDir, "amenities.geojson"))).toBe(true);
+  });
+
+  test("does not write snapshots when any query fails", async () => {
+    fs.writeFileSync(path.join(outDir, "parks.geojson"), "OLD");
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(ok(PARKS_RESPONSE))
+      .mockResolvedValueOnce(ok(TRAILS_RESPONSE))
+      .mockResolvedValue({ ok: false, status: 504 });
+
+    await expect(
+      runFetch({ config, outDir, fetchImpl, overpassOptions: { sleep: async () => {} } })
+    ).rejects.toThrow("Overpass HTTP 504");
+    expect(fs.readFileSync(path.join(outDir, "parks.geojson"), "utf8")).toBe("OLD");
+  });
+
+  test("de-duplicates parks that appear in overlapping areas", async () => {
+    const fetchImpl = jest.fn();
+    for (let i = 0; i < 2; i++) {
+      fetchImpl
+        .mockResolvedValueOnce(ok(PARKS_RESPONSE))
+        .mockResolvedValueOnce(ok(TRAILS_RESPONSE))
+        .mockResolvedValueOnce(ok(AMENITIES_RESPONSE));
+    }
+    const twoAreas = { areas: [{ name: "A", bbox: BBOX }, { name: "B", bbox: BBOX }], exclude: [] };
+
+    const counts = await runFetch({ config: twoAreas, outDir, fetchImpl });
+
+    expect(counts).toEqual({ parks: 1, trails: 1, amenities: 1 });
+  });
+});

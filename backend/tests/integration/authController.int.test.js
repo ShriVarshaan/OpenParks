@@ -322,15 +322,15 @@ describe("login", () => {
         });
     });
 
-    describe("401 - unexpected error", () => {
-        it("returns 401 when prisma throws unexpectedly", async () => {
+    describe("500 - unexpected error", () => {
+        it("returns 500 when prisma throws unexpectedly", async () => {
             prisma.user.findUnique.mockRejectedValue(new Error("DB timeout"));
             const res = buildRes();
 
             await login(buildReq(loginBody), res);
 
-            expect(res.status).toHaveBeenCalledWith(401);
-            expect(res.json).toHaveBeenCalledWith({ message: "Invalid credentials" });
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({ message: "Login failed" });
         });
 
         it("does not throw — error is absorbed into the response", async () => {

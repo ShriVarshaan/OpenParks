@@ -69,7 +69,7 @@ export const login = async(req, res, next) => {
         user: { id: user.id, email: user.email }
     })
     } catch (err){
-        return res.status(401).json({message: "Invalid credentials"})
+        return res.status(500).json({message: "Login failed"})
     }
 }
 

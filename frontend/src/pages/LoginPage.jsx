@@ -3,6 +3,10 @@ import toast from "react-hot-toast"
 import API from "../api/axiosInstance";
 import { useNavigate } from "react-router";
 
+// No err.response means the request never reached the backend (it is down, or the URL is wrong).
+const NETWORK_ERROR = "Cannot reach the server. Is the backend running?"
+const GENERIC_ERROR = "Something went wrong, please try again"
+
 export default function LoginPage({ onLogin }) {
   const navigate = useNavigate()
   const [isRegister, setIsRegister] = useState(false);
@@ -47,12 +51,16 @@ export default function LoginPage({ onLogin }) {
         navigate("/")
 
       } catch (err) {
-        if (err.response?.status === 403){
+        if (!err.response){
+          toast.error(NETWORK_ERROR)
+        } else if (err.response.status === 403){
           toast.error("Please verify your email before logging in")
           setPendingEmail(form.email)
           setOtpStep(true)
-        }else {
+        } else if (err.response.status === 401){
           toast.error("Invalid credentials")
+        } else {
+          toast.error(GENERIC_ERROR)
         }
         
       }
@@ -65,7 +73,9 @@ export default function LoginPage({ onLogin }) {
         localStorage.setItem("token", res.data.token)
 
       } catch (err){
-        if (err.response && err.response.status === 409){
+        if (!err.response){
+          toast.error(NETWORK_ERROR)
+        } else if (err.response.status === 409){
           toast.error("User exists already, login")
         }else if (err.response?.data?.error){
           console.log(err.response.data.error)

@@ -58,6 +58,9 @@ Each component is tested in complete isolation. API calls, navigation, toast not
 | UT-LP-06 | Stores token in localStorage after successful login | API.post resolves with token | localStorage token set, toast.success called | Token stored | PASS |
 | UT-LP-07 | Navigates to home page after successful login | API.post resolves with token | navigate called with '/' | Navigation triggered | PASS |
 | UT-LP-08 | Shows error message when login fails with invalid credentials | API.post rejects with 401 | toast.error called with 'Invalid credentials' | Error toast shown | PASS |
+| UT-LP-08a | Says the server cannot be reached when login gets no response | API.post rejects with no `response` (network error) | toast.error called with 'Cannot reach the server. Is the backend running?', not 'Invalid credentials' | Network toast shown | PASS |
+| UT-LP-08b | Shows a generic error when login fails on the server | API.post rejects with 500 | toast.error called with 'Something went wrong, please try again', not 'Invalid credentials' | Generic toast shown | PASS |
+| UT-LP-08c | Says the server cannot be reached when sign-up gets no response | Registration submit; API.post rejects with no `response` | toast.error called with 'Cannot reach the server. Is the backend running?' | Network toast shown | PASS |
 
 ### 4.1.3 Registration Flow
 

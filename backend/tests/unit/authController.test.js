@@ -212,7 +212,7 @@ describe("authController - login", () => {
     });
   });
 
-  test("returns 401 if login throws an error", async () => {
+  test("returns 500, not invalid credentials, if login throws an error", async () => {
     const req = {
       body: {
         email: "test@example.com",
@@ -225,7 +225,8 @@ describe("authController - login", () => {
 
     await login(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: "Invalid credentials" });
+    // A server failure is not a wrong password: say so, so the login page does not blame the user.
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Login failed" });
   });
 });

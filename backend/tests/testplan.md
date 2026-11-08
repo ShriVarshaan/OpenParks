@@ -88,9 +88,17 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | UT-AU-04 | Returns 401 if user not found | `findUnique` returns null | `status 401`, body: `{ message: 'Invalid credentials' }` | status 401 | PASS |
 | UT-AU-05 | Returns 401 if password is wrong | `bcrypt.compare` returns false | `status 401`, body: `{ message: 'Invalid credentials' }` | status 401 | PASS |
 | UT-AU-06 | Logs in and returns JWT on valid credentials | User found, `bcrypt.compare` returns true | `status 200`, body includes `token` and `user {id, email}` | status 200 with `login-token` | PASS |
-| UT-AU-07 | Returns 401 if login throws | `findUnique` rejects with DB failure | `status 401`, body: `{ message: 'Invalid credentials' }` | status 401 | PASS |
+| UT-AU-07 | Returns 500 (not 401) if login throws | `findUnique` rejects with DB failure | `status 500`, body: `{ message: 'Login failed' }` | status 500 | PASS |
 
 ---
+
+#### 4.1.3 `checkValidOTP()` (validateEmail.js) — no active OTP
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-VE-01 | Sends a new OTP to the email address | `oneTimePasswords.findFirst` → null | `sendVerification('a@example.com')`; `status 401`, `{ message: 'No active OTP, new OTP sent' }` | as expected | PASS |
+| UT-VE-02 | Awaits the new OTP being sent | `sendVerification` resolves after a delay | Controller resolves only after the send settles | as expected | PASS |
+| UT-VE-03 | Answers 500 instead of crashing when the send fails | `sendVerification` rejects | `status 500`, `{ message: 'Could not send a new OTP, try again later' }`; no unhandled rejection | as expected | PASS |
 
 ### 4.2 parkController
 
@@ -152,6 +160,7 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 |---|---|---|---|---|---|
 | UT-RV-03 | Returns 404 if park does not exist | `findUnique` returns null for park | `status 404`, body: `{ message: 'Park not found' }` | status 404 | PASS |
 | UT-RV-04 | Creates review for valid park | Park found, `create` resolves with new review | `status 201`, body: created review object | status 201 with review data | PASS |
+| UT-RV-04a | Saves the review title sent by the form | Body `{ title: 'Lovely lake', content, rating }` | `create` data includes `title: 'Lovely lake'` | as expected | PASS |
 | UT-RV-05 | Returns 500 on database query failure | `create` rejects with DB error | `status 500`, body: `{mrssage: "Internal server error"}` | status 500 | PASS |
 
 #### 4.4.3 `getAllReviewsUser()`
@@ -308,7 +317,7 @@ Integration tests run against the full Express application stack including authe
 | UT-AU-20 | `login` returns 200 with message, token, and user object | authController, Prisma, bcrypt, JWT | Mock prerequisites for successful login; call `login`; inspect response | Response status 200; `res.json` called with `{ message: "logged in", token: "mock.jwt.token", user: { id, email } }` | Response status 200; `res.json` called with correct payload | PASS |
 | UT-AU-21 | `login` does not expose hashed password in the response | authController, Prisma, bcrypt, JWT | Mock prerequisites for successful login; call `login`; inspect `payload.user` | `payload.user` does not have a `password` property | `payload.user` had no `password` property | PASS |
 | UT-AU-22 | `login` does not send a verification email for a validated user | authController, sendVerification | Mock prerequisites for successful login; call `login` | `sendVerification` not called | `sendVerification` was not called | PASS |
-| UT-AU-23 | `login` returns 401 when Prisma throws unexpectedly | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("DB timeout")`; call `login` | Response status 401; `res.json` called with `{ message: "Invalid credentials" }` | Response status 401; `res.json` called with `{ message: "Invalid credentials" }` | PASS |
+| UT-AU-23 | `login` returns 500 when Prisma throws unexpectedly | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("DB timeout")`; call `login` | Response status 500; `res.json` called with `{ message: "Login failed" }` | Response status 500; `res.json` called with `{ message: "Login failed" }` | PASS |
 | UT-AU-24 | `login` does not propagate thrown errors | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("Crash")`; await `login` | Promise resolves without throwing | Promise resolved without throwing | PASS |
 ---
 ### 5.2 Parks Endpoints

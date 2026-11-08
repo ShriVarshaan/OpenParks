@@ -6,7 +6,7 @@ A full-stack web application, built using the PERN stack (PostgreSQL + PostGIS, 
 
 ## Quick start
 
-You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running) and [Node.js](https://nodejs.org/) 20 or newer.
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running) and [Node.js](https://nodejs.org/) 22.12 or newer (20.19+ also works).
 
 ```bash
 git clone https://github.com/ShriVarshaan/OpenParks.git
@@ -38,7 +38,7 @@ Open **http://localhost:5173**.
 
 | Problem | Fix |
 |---|---|
-| `docker compose up` says a port is in use | Another program is using 5433, 1025 or 8025. Set `OPENPARKS_DB_PORT`, `OPENPARKS_SMTP_PORT` or `OPENPARKS_MAIL_UI_PORT` before `docker compose up`, and update `DATABASE_URL` / `EMAIL_PORT` in `backend/.env` to match. |
+| `docker compose up` says a port is in use | Another program is using 5433, 1025 or 8025. Create a file named `.env` in the repo root containing e.g. `OPENPARKS_DB_PORT=5434` (also `OPENPARKS_SMTP_PORT`, `OPENPARKS_MAIL_UI_PORT` if needed) and run `docker compose up -d --wait` again; Compose reads that file every time. Then run `node backend/scripts/ensure-env.js` to create `backend/.env`, change the port in its `DATABASE_URL` (and `EMAIL_PORT`) to match, and continue with `npm run setup`. For `npm run test:db`, also set `TEST_DATABASE_URL` to the same URL with database `openparks_test`. |
 | The login page says "Cannot reach the server" | The backend isn't running. Start it with `npm run dev:backend`. |
 | `npm run setup` fails with `P1001: Can't reach database server` | Docker isn't running, or the database is still starting. Run `docker compose up -d --wait` and try again. |
 | The backend runs somewhere other than `localhost:3000` | Copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL`. |
@@ -157,7 +157,7 @@ npm run test:unit
 npm run test:integration
 npm run test:db                            # real PostGIS tests; needs `docker compose up -d --wait`
 
-cd frontend
+cd ../frontend
 npx vitest run
 ```
 

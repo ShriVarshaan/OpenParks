@@ -7,5 +7,8 @@
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "test": "npm --prefix backend run test:unit && npm --prefix backend run test:integration && cd frontend && npx vitest run"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

@@ -244,6 +244,7 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
 | UT-AC-01 | Returns user when found | `findUnique` returns user body | `status 200`, body: user body | status 200 | PASS |
+| UT-AC-01a | Never sends the password hash | `findUnique` returns a user with `password` | `status 200`, body has no `password` field | as expected | PASS |
 | UT-AC-02 | Returns 404 when user is not found | `findUnique` returns `null` | `status 404`, body: `{message: "User not found"}` | status 404 | PASS |
 | UT-AC-03 | Returns 500 on database error in getUser | `findUnique` rejects with DB error | `status 500`, body: error object | status 500 | PASS |
 

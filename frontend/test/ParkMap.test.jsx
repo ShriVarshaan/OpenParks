@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { BrowserRouter } from 'react-router'
 import MapRenderer from '../src/pages/ParkMap'
 import API from '../src/api/axiosInstance'
+import maplibregl from 'maplibre-gl'
  
 vi.mock('../src/api/axiosInstance', () => ({
   default: {
@@ -33,6 +34,7 @@ vi.mock('maplibre-gl', () => ({
       setPaintProperty: vi.fn(),
       getCanvas: vi.fn().mockReturnValue({ style: {} }),
       getZoom: vi.fn().mockReturnValue(15),
+      setMaxBounds: vi.fn(),
     })),
     NavigationControl: vi.fn(),
     ScaleControl: vi.fn(),
@@ -85,6 +87,53 @@ describe('MapRenderer (ParkMap)', () => {
     expect(document.querySelector('.map-container-wrapper')).toBeInTheDocument()
   })
  
+  it('lets the map pan to every loaded park, wherever it is', async () => {
+    const parks = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-2.5, 52.0], [-2.4, 52.0], [-2.4, 52.1], [-2.5, 52.0]]] } },
+      ],
+    }
+    API.get.mockImplementation((url) => Promise.resolve({ data: url === '/api/parks' ? parks : mockGeojson }))
+    render(
+      <BrowserRouter>
+        <MapRenderer />
+      </BrowserRouter>
+    )
+    const map = maplibregl.Map.mock.results[0].value
+    const onLoad = map.on.mock.calls.find(([event]) => event === 'load')[1]
+
+    onLoad()
+
+    await waitFor(() => expect(map.setMaxBounds).toHaveBeenCalledTimes(1))
+    const [[w, s], [e, n]] = map.setMaxBounds.mock.calls[0][0]
+    expect([w, s, e, n].map((v) => Number(v.toFixed(6)))).toEqual([-2.51, 51.99, -2.39, 52.11])
+  })
+
+  it('keeps the default pan limits when no parks load', async () => {
+    render(
+      <BrowserRouter>
+        <MapRenderer />
+      </BrowserRouter>
+    )
+    const map = maplibregl.Map.mock.results[0].value
+    map.on.mock.calls.find(([event]) => event === 'load')[1]()
+
+    await waitFor(() => expect(map.addSource).toHaveBeenCalledWith('park-boundary', expect.anything()))
+    expect(map.setMaxBounds).not.toHaveBeenCalled()
+  })
+
+  it('names the whole city in the header, not one park', () => {
+    render(
+      <BrowserRouter>
+        <MapRenderer />
+      </BrowserRouter>
+    )
+
+    expect(screen.getByText('Birmingham')).toBeInTheDocument()
+    expect(screen.queryByText(/Cannon Hill/)).not.toBeInTheDocument()
+  })
+
   it('renders the OpenParks header', () => {
     render(
       <BrowserRouter>

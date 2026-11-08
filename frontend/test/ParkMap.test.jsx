@@ -87,6 +87,12 @@ describe('MapRenderer (ParkMap)', () => {
     expect(document.querySelector('.map-container-wrapper')).toBeInTheDocument()
   })
  
+  // Parks and trails are FeatureCollections; amenities and reports are arrays.
+  const mockApiAfterLoad = (parks) =>
+    API.get.mockImplementation((url) =>
+      Promise.resolve({ data: url === '/api/parks' ? parks : url === '/api/trails' ? mockGeojson : [] })
+    )
+
   it('lets the map pan to every loaded park, wherever it is', async () => {
     const parks = {
       type: 'FeatureCollection',
@@ -94,7 +100,7 @@ describe('MapRenderer (ParkMap)', () => {
         { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-2.5, 52.0], [-2.4, 52.0], [-2.4, 52.1], [-2.5, 52.0]]] } },
       ],
     }
-    API.get.mockImplementation((url) => Promise.resolve({ data: url === '/api/parks' ? parks : mockGeojson }))
+    mockApiAfterLoad(parks)
     render(
       <BrowserRouter>
         <MapRenderer />
@@ -111,6 +117,7 @@ describe('MapRenderer (ParkMap)', () => {
   })
 
   it('keeps the default pan limits when no parks load', async () => {
+    mockApiAfterLoad(mockGeojson)
     render(
       <BrowserRouter>
         <MapRenderer />

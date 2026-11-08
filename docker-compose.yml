@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: openparks
+      POSTGRES_PASSWORD: openparks
+      POSTGRES_DB: openparks
+    ports:
+      - "${OPENPARKS_DB_PORT:-5433}:5432"
+    volumes:
+      - openparks-db:/var/lib/postgresql/data
+      - ./docker/initdb/20-test-db.sql:/docker-entrypoint-initdb.d/20-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openparks -d openparks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mail:
+    image: axllent/mailpit
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  openparks-db:

@@ -14,7 +14,12 @@ export const checkValidOTP = async(req,res) =>{
     try{
         const OTP = await prisma.oneTimePasswords.findFirst({where: {email: req.body.email, active: true}})
         if(!OTP){
-            sendVerification(req,res,req.body.email)
+            // Awaited: an un-awaited rejection here (e.g. SMTP down) used to crash the server.
+            try {
+                await sendVerification(req.body.email)
+            } catch (err) {
+                return res.status(500).json({message: "Could not send a new OTP, try again later"})
+            }
             return res.status(401).json({message: "No active OTP, new OTP sent"})
         }
         const now = new Date();

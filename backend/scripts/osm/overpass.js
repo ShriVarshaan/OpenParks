@@ -34,9 +34,16 @@ export async function fetchOverpass(query, fetchImpl = fetch, { retries = 4, bas
       body: new URLSearchParams({ data: query }).toString(),
     });
     if (response.ok) {
-      return response.json();
-    }
-    if (!TRANSIENT_STATUSES.has(response.status) || attempt >= retries) {
+      const data = await response.json();
+      // A busy server can answer 200 with truncated data and a "runtime error" remark
+      // (timeout / out of memory). Treat that as a transient failure, never as data.
+      if (typeof data.remark !== "string" || !/error/i.test(data.remark)) {
+        return data;
+      }
+      if (attempt >= retries) {
+        throw new Error(`Overpass runtime error: ${data.remark}`);
+      }
+    } else if (!TRANSIENT_STATUSES.has(response.status) || attempt >= retries) {
       throw new Error(`Overpass HTTP ${response.status}`);
     }
     await sleep(baseDelayMs * 2 ** attempt); // 5s, 10s, 20s, 40s

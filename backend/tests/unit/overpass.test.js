@@ -88,6 +88,16 @@ describe("fetchOverpass", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
+  test("treats a 200 response carrying a runtime-error remark as a failure", async () => {
+    const partial = ok({ elements: [], remark: "runtime error: Query timed out in \"query\" at line 1 after 121 seconds." });
+    const fetchImpl = jest.fn().mockResolvedValue(partial);
+
+    await expect(fetchOverpass("[out:json];", fetchImpl, { retries: 1, sleep: noSleep })).rejects.toThrow(
+      "Overpass runtime error"
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   test("does not retry a client error such as 400", async () => {
     const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 400 });
 
@@ -126,6 +136,19 @@ describe("runFetch", () => {
       runFetch({ config, outDir, fetchImpl, overpassOptions: { sleep: async () => {} } })
     ).rejects.toThrow("Overpass HTTP 504");
     expect(fs.readFileSync(path.join(outDir, "parks.geojson"), "utf8")).toBe("OLD");
+  });
+
+  test("keeps existing snapshots when Overpass returns partial data with an error remark", async () => {
+    fs.writeFileSync(path.join(outDir, "trails.geojson"), "OLD");
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(ok(PARKS_RESPONSE))
+      .mockResolvedValue(ok({ elements: [], remark: "runtime error: Query run out of memory using about 2048 MB of RAM." }));
+
+    await expect(
+      runFetch({ config, outDir, fetchImpl, overpassOptions: { sleep: async () => {} } })
+    ).rejects.toThrow("Overpass runtime error");
+    expect(fs.readFileSync(path.join(outDir, "trails.geojson"), "utf8")).toBe("OLD");
   });
 
   test("de-duplicates parks that appear in overlapping areas", async () => {

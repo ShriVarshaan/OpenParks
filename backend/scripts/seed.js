@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import bcrypt from "bcrypt";
+import { Prisma } from "../src/generated/index.js";
 
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "prisma", "data");
 
@@ -19,6 +20,32 @@ const DEMO_REVIEW_PARK = "Cannon Hill Park";
 // Parks are upserted (reviews and reports reference them). Trails and amenities have no
 // dependents, so OSM-sourced rows are replaced wholesale — this also drops features
 // that disappeared from the snapshot.
+
+// Parks in the current snapshot, for this transaction only. Trails and amenities are only
+// assigned to these (or to parks that never came from OSM).
+async function recordSnapshotParks(tx, parks) {
+  await tx.$executeRaw`
+    CREATE TEMP TABLE snapshot_parks ON COMMIT DROP AS
+    SELECT f->'properties'->>'osm_type' AS osm_type, (f->'properties'->>'osm_id')::bigint AS osm_id
+    FROM jsonb_array_elements(${JSON.stringify(parks)}::jsonb->'features') AS f`;
+}
+
+// Removes OSM parks that left the snapshot (e.g. added to `exclude`). Parks that users have
+// reviewed or reported on are kept so that history survives; they are returned for a warning.
+async function removeStaleParks(tx) {
+  await tx.$executeRaw`
+    DELETE FROM "Park" p
+    WHERE p.osm_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM snapshot_parks s WHERE s.osm_type = p.osm_type AND s.osm_id = p.osm_id)
+      AND NOT EXISTS (SELECT 1 FROM "Review" r WHERE r.park_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM "SafetyReport" sr WHERE sr.park_id = p.id)`;
+  return tx.$queryRaw`
+    SELECT p.name FROM "Park" p
+    WHERE p.osm_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM snapshot_parks s WHERE s.osm_type = p.osm_type AND s.osm_id = p.osm_id)
+    ORDER BY p.name`;
+}
+
 async function loadParks(tx, parks) {
   await tx.$executeRaw`
     INSERT INTO "Park" (name, osm_type, osm_id, location)
@@ -31,8 +58,11 @@ async function loadParks(tx, parks) {
     ON CONFLICT (osm_type, osm_id) DO UPDATE SET name = EXCLUDED.name, location = EXCLUDED.location`;
 }
 
+// Only parks in the current snapshot (or non-OSM parks) can receive trails and amenities.
+const CURRENT_PARK = Prisma.sql`(p.osm_id IS NULL OR EXISTS (
+  SELECT 1 FROM snapshot_parks s WHERE s.osm_type = p.osm_type AND s.osm_id = p.osm_id))`;
+
 async function loadTrails(tx, trails) {
-  await tx.$executeRaw`DELETE FROM trails WHERE osm_id IS NOT NULL`;
   // Each trail goes to the single park it overlaps most; trails touching no park are skipped.
   await tx.$executeRaw`
     INSERT INTO trails (park_id, osm_id, highway, name, surface, geom)
@@ -49,14 +79,13 @@ async function loadTrails(tx, trails) {
     CROSS JOIN LATERAL (
       SELECT p.id
       FROM "Park" p
-      WHERE ST_Intersects(p.location::geometry, t.geom)
+      WHERE ST_Intersects(p.location::geometry, t.geom) AND ${CURRENT_PARK}
       ORDER BY ST_Length(ST_Intersection(p.location::geometry, t.geom)::geography) DESC, p.id
       LIMIT 1
     ) best`;
 }
 
 async function loadAmenities(tx, amenities) {
-  await tx.$executeRaw`DELETE FROM "ParkAmenity" WHERE osm_id IS NOT NULL`;
   await tx.$executeRaw`
     INSERT INTO "ParkAmenity" (park_id, name, osm_type, osm_id, location)
     SELECT inside.id, a.name, a.osm_type, a.osm_id, a.geom
@@ -69,7 +98,7 @@ async function loadAmenities(tx, amenities) {
       FROM jsonb_array_elements(${JSON.stringify(amenities)}::jsonb->'features') AS f
     ) a
     CROSS JOIN LATERAL (
-      SELECT p.id FROM "Park" p WHERE ST_Covers(p.location, a.geom::geography) ORDER BY p.id LIMIT 1
+      SELECT p.id FROM "Park" p WHERE ST_Covers(p.location, a.geom::geography) AND ${CURRENT_PARK} ORDER BY p.id LIMIT 1
     ) inside`;
 }
 
@@ -100,10 +129,18 @@ async function countRows(prisma) {
   return row;
 }
 
-export async function seed({ prisma, data }) {
+export async function seed({ prisma, data, warn = () => {} }) {
   let demoUser = false;
   await prisma.$transaction(
     async (tx) => {
+      await recordSnapshotParks(tx, data.parks);
+      // Trails and amenities reference parks, so clear them before removing stale parks.
+      await tx.$executeRaw`DELETE FROM trails WHERE osm_id IS NOT NULL`;
+      await tx.$executeRaw`DELETE FROM "ParkAmenity" WHERE osm_id IS NOT NULL`;
+      const kept = await removeStaleParks(tx);
+      for (const { name } of kept) {
+        warn(`Kept "${name}": no longer in the snapshot, but it has reviews or reports. It gets no trails or amenities.`);
+      }
       await loadParks(tx, data.parks);
       await loadTrails(tx, data.trails);
       await loadAmenities(tx, data.amenities);
@@ -123,7 +160,7 @@ const isCli = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath
 if (isCli) {
   const { default: prisma } = await import("../src/config/prisma.js");
   try {
-    const counts = await seed({ prisma, data: readSnapshots() });
+    const counts = await seed({ prisma, data: readSnapshots(), warn: console.warn });
     console.log("Seeded:", counts);
     console.log(`Demo login: ${DEMO_USER.email} / ${DEMO_USER.password}`);
   } catch (err) {

@@ -8,7 +8,8 @@ import { buildPoolConfig } from './env.js';
 const pool = new pg.Pool(buildPoolConfig());
 
 // 2. Initialize the Prisma adapter
-const adapter = new PrismaPg(pool);
+// disposeExternalPool: $disconnect() also closes the pool, so scripts and tests exit promptly
+const adapter = new PrismaPg(pool, { disposeExternalPool: true });
 
 // 3. Pass the adapter to the PrismaClient constructor
 const prisma = new PrismaClient({ adapter });

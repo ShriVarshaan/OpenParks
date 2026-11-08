@@ -1,5 +1,6 @@
 // Runs against the real Docker PostGIS test database (openparks_test), never the dev DB.
 // Requires `docker compose up -d --wait`. Run with: npm run test:db
+import { jest } from "@jest/globals";
 import { execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -73,6 +74,40 @@ test("assigns a trail crossing two parks to exactly one park — the one it over
     `SELECT p.osm_id::text AS park_osm_id FROM trails t JOIN "Park" p ON p.id = t.park_id WHERE t.osm_id = ${CROSSING_TRAIL_ID}`
   );
   expect(rows).toEqual([{ park_osm_id: PARK_B.osm_id }]);
+});
+
+const withoutPark = (data, park) => {
+  data.parks.features = data.parks.features.filter((f) => f.properties.osm_id !== park.osm_id);
+  return data;
+};
+
+test("removes a park dropped from the snapshot and moves its trail to the remaining park", async () => {
+  await seed({ prisma, data: fixtureData() });
+
+  await seed({ prisma, data: withoutPark(fixtureData(), PARK_B) });
+
+  const { count } = await one(`SELECT count(*)::int AS count FROM "Park" WHERE osm_id = ${PARK_B.osm_id}`);
+  expect(count).toBe(0);
+  const trail = await one(
+    `SELECT p.osm_id::text AS park_osm_id FROM trails t JOIN "Park" p ON p.id = t.park_id WHERE t.osm_id = ${CROSSING_TRAIL_ID}`
+  );
+  expect(trail.park_osm_id).toBe(PARK_A.osm_id);
+});
+
+test("keeps a dropped park that has reviews, warns, and assigns it no trails or amenities", async () => {
+  await seed({ prisma, data: fixtureData() }); // demo reviews are on Park A
+  const warn = jest.fn();
+
+  const counts = await seed({ prisma, data: withoutPark(fixtureData(), PARK_A), warn });
+
+  const { count } = await one(`SELECT count(*)::int AS count FROM "Park" WHERE osm_id = ${PARK_A.osm_id}`);
+  expect(count).toBe(1);
+  expect(counts.amenities).toBe(0); // the only in-park amenity sits in Park A
+  const trail = await one(
+    `SELECT p.osm_id::text AS park_osm_id FROM trails t JOIN "Park" p ON p.id = t.park_id WHERE t.osm_id = ${CROSSING_TRAIL_ID}`
+  );
+  expect(trail.park_osm_id).toBe(PARK_B.osm_id);
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining(PARK_A.name));
 });
 
 test("creates the demo user once, verified, with three reviews of Cannon Hill Park", async () => {

@@ -19,3 +19,7 @@ These files are committed so that setting up the app needs no network access:
 2. From `backend/`, run `npm run parks:fetch`. It queries the public Overpass API, retries if the server is busy,
    and only overwrites these files if every request succeeds.
 3. Run `npm run db:seed` to load the new data, then commit the updated `.geojson` files.
+
+A park that is no longer in the snapshot is deleted by the next `db:seed`, unless someone has reviewed it
+or filed a safety report on it. Those parks are kept (with a warning) so that history isn't lost,
+but they no longer get trails or amenities.

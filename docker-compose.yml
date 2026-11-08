@@ -11,10 +11,13 @@ services:
       - openparks-db:/var/lib/postgresql/data
       - ./docker/initdb/20-openparks-init.sql:/docker-entrypoint-initdb.d/20-openparks-init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openparks -d openparks"]
-      interval: 5s
+      # Check over TCP: during first-run init Postgres only listens on its Unix socket,
+      # so a socket check would report healthy before the host port is usable.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U openparks -d openparks"]
+      interval: 3s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 10s
 
   mail:
     image: axllent/mailpit

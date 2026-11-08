@@ -40,7 +40,7 @@
 
 # Milestone 1: Local infrastructure boots
 
-**Done when:** `docker compose up -d && cd backend && npm run db:migrate && npm start` gives a running API, and `GET /api/parks` returns `{"type":"FeatureCollection","features":[]}` from the local DB.
+**Done when:** `docker compose up -d --wait && cd backend && npm run db:migrate && npm start` gives a running API, and `GET /api/parks` returns `{"type":"FeatureCollection","features":[]}` from the local DB.
 
 ### Task 1.1: Branch, housekeeping, and Docker Compose
 
@@ -217,7 +217,7 @@
   - **Amenities:** `park_id` is the park where `ST_Covers(park.location, point::geography)`. Skip amenities in no park. Use `ON CONFLICT (osm_type, osm_id) DO UPDATE`.
   - **Demo data:** upsert the demo user (Global Constraints). If that user has no reviews, insert 3 reviews on the park named `Cannon Hill Park`, rated 5, 4 and 5, with titles "Lovely lake walk", "Great for kids" and "Busy at weekends".
 
-- **Test DB isolation:** the tests never touch the dev DB. Task 1.1 adds `docker/initdb/20-openparks-init.sql` (drops the image's pre-installed PostGIS extensions so Prisma owns them, then `CREATE DATABASE openparks_test;`), mounted into `/docker-entrypoint-initdb.d/`. The test file builds `testUrl = process.env.TEST_DATABASE_URL ?? "postgresql://openparks:openparks@localhost:5433/openparks_test"`. It sets `process.env.DATABASE_URL = testUrl` before `await import`-ing `src/config/prisma.js`, and runs `execSync("npx prisma migrate reset --force --skip-seed", { env: { ...process.env, DATABASE_URL: testUrl } })` in `beforeAll`.
+- **Test DB isolation:** the tests never touch the dev DB. Task 1.1 adds `docker/initdb/20-openparks-init.sql` (drops the image's pre-installed PostGIS extensions so Prisma owns them, then `CREATE DATABASE openparks_test;`), mounted into `/docker-entrypoint-initdb.d/`. The test file builds `testUrl = process.env.TEST_DATABASE_URL ?? "postgresql://openparks:openparks@localhost:5433/openparks_test"`. It sets `process.env.DATABASE_URL = testUrl` before `await import`-ing `src/config/prisma.js`, and runs `execSync("npx prisma migrate reset --force", { env: { ...process.env, DATABASE_URL: testUrl } })` in `beforeAll`.
 
 - [ ] **Step 1: Write the failing DB tests**, using the fixtures:
   - `seeds fixture parks, trails, amenities`: the counts match the fixtures, and `SELECT ST_SRID(location::geometry) FROM "Park"` is all `4326`
@@ -276,7 +276,7 @@ The current insert uses SRID `4236` and calls `$executeRaw`, which returns a row
 
 ### Task 3.3: Manual end-to-end check (no code unless it finds a bug)
 
-- [ ] **Step 1:** Start everything: `docker compose up -d`, `cd backend && npm run dev`, and `cd frontend && npm run dev`.
+- [ ] **Step 1:** Start everything: `docker compose up -d --wait`, `cd backend && npm run dev`, and `cd frontend && npm run dev`.
 - [ ] **Step 2: Sign up** as `tester@example.com`. Open http://localhost:8025, where the OTP email should appear. Verify the OTP. Expected: logged in and redirected.
 - [ ] **Step 3: Post a review** on Cannon Hill Park. Expected: it appears in the park's review pane on `/`.
 - [ ] **Step 4: File a report** by clicking inside Cannon Hill on `/report`. Then run `docker compose exec db psql -U openparks -c 'SELECT ST_SRID(location::geometry), ST_AsText(location) FROM "SafetyReport"'`. Expected: SRID `4326`, and coordinates near `-1.90 52.45`. The heatmap dot appears where you clicked.
@@ -299,7 +299,7 @@ The current insert uses SRID `4236` and calls `$executeRaw`, which returns a row
 - Modify: `README.md`
   - Remove the "will not work" note.
   - Replace Getting Started with a Quick Start (Docker Desktop prerequisite):
-    1. `docker compose up -d`
+    1. `docker compose up -d --wait`
     2. `cp backend/.env.example backend/.env`
     3. `npm run setup`
     4. Run `npm run dev:backend` and `npm run dev:frontend` in two terminals

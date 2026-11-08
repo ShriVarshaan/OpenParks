@@ -46,6 +46,22 @@ describe("amenityController - getAmenities", () => {
     expect(res.json).toHaveBeenCalledWith(amenities);
   });
 
+  test("returns JSON-serialisable amenities when osm_id is a BigInt", async () => {
+    const req = { params: { id: "1" } };
+    const res = createRes();
+
+    mockFindMany.mockResolvedValue([
+      { id: 1, park_id: 1, name: "bench", osm_type: "node", osm_id: 9007199254740993n },
+    ]);
+
+    await getAmenities(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    const payload = res.json.mock.calls[0][0];
+    expect(() => JSON.stringify(payload)).not.toThrow();
+    expect(payload[0].osm_id).toBe("9007199254740993");
+  });
+
   test("handles empty amenities list", async () => {
     const req = { params: { id: "2" } };
     const res = createRes();

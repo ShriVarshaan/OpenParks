@@ -47,7 +47,7 @@ const mockExistingUser = {
     email: "jane@example.com",
     password: "hashed_password",
     username: "jane",
-    validated: true,
+    Verified: true,
 };
 
 const mockNewUser = {
@@ -241,7 +241,7 @@ describe("login", () => {
 
     describe("403 - email not verified", () => {
         it("returns 403 when the user has not verified their email", async () => {
-            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, validated: false });
+            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, Verified: false });
             bcrypt.compare.mockResolvedValue(true);
             sendVerification.mockResolvedValue();
             const res = buildRes();
@@ -255,7 +255,7 @@ describe("login", () => {
         });
 
         it("re-sends the verification email when the user is unverified", async () => {
-            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, validated: false });
+            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, Verified: false });
             bcrypt.compare.mockResolvedValue(true);
             sendVerification.mockResolvedValue();
 
@@ -266,7 +266,7 @@ describe("login", () => {
         });
 
         it("does not issue a JWT when the user is unverified", async () => {
-            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, validated: false });
+            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, Verified: false });
             bcrypt.compare.mockResolvedValue(true);
             sendVerification.mockResolvedValue();
 

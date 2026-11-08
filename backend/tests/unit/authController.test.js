@@ -173,7 +173,7 @@ describe("authController - login", () => {
       id: 1,
       email: "test@example.com",
       password: "hashedPassword",
-      validated: true,
+      Verified: true,
     });
     mockCompare.mockResolvedValue(false);
 
@@ -197,7 +197,7 @@ describe("authController - login", () => {
       id: 1,
       email: "test@example.com",
       password: "hashedPassword",
-      validated: true,
+      Verified: true,
     });
     mockCompare.mockResolvedValue(true);
     mockSign.mockReturnValue("login-token");

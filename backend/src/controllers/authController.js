@@ -1,10 +1,9 @@
+import "../config/loadEnv.js"
 import prisma from "../config/prisma.js"
 import nodemailer from "nodemailer"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import dotenv from "dotenv"
 import { sendVerification } from "./sendVerification.js";
-dotenv.config()
 
 export const signup = async (req, res, next) =>{
     try{

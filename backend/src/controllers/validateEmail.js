@@ -1,3 +1,4 @@
+import "../config/loadEnv.js"
 /*connected to a html object of an entry box to enter the one time password
 takes input and checks to see if that is what is stored in the database
 If so, it then maeks the account which is attached to that email be verified
@@ -7,9 +8,7 @@ import prisma from "../config/prisma.js"
 import nodemailer from "nodemailer"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import dotenv from "dotenv"
 import { sendVerification } from "./sendVerification.js";
-dotenv.config()
 
 export const checkValidOTP = async(req,res) =>{
     try{

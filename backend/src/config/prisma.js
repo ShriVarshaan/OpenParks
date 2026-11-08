@@ -1,9 +1,8 @@
+import "./loadEnv.js"
 import { PrismaClient } from '../generated/index.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import dotenv from "dotenv"
 import { buildPoolConfig } from './env.js';
-dotenv.config()
 
 // 1. Create a connection pool (SSL only when DB_SSL=true, e.g. hosted Postgres)
 const pool = new pg.Pool(buildPoolConfig());

@@ -1,5 +1,5 @@
+import "./config/loadEnv.js"
 import express from "express"
-import dotenv from "dotenv"
 import parkRoutes from "./routes/parkRoutes.js"
 import authRoutes from "./routes/authRoutes.js"
 import amenityRoutes from "./routes/amenitiesRoutes.js"
@@ -13,7 +13,6 @@ import "./config/passport.js"
 import "./config/prisma.js"
 import { parseCorsOrigins } from "./config/env.js"
 
-dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3000
 

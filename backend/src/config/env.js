@@ -16,7 +16,7 @@ export function buildPoolConfig(env = process.env) {
 export function buildTransportOptions(env = process.env) {
   const options = {
     host: env.EMAIL_HOST,
-    port: Number(env.EMAIL_PORT),
+    port: Number(env.EMAIL_PORT) || 587,
     secure: env.EMAIL_PORT === "465",
   };
   if (env.EMAIL_USER) {

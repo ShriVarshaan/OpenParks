@@ -23,6 +23,10 @@ describe("buildTransportOptions", () => {
     ).toEqual({ host: "localhost", port: 1025, secure: false });
   });
 
+  test("defaults to port 587 when EMAIL_PORT is missing", () => {
+    expect(buildTransportOptions({ EMAIL_HOST: "h" })).toEqual({ host: "h", port: 587, secure: false });
+  });
+
   test("includes auth and secure on port 465", () => {
     expect(
       buildTransportOptions({ EMAIL_HOST: "h", EMAIL_PORT: "465", EMAIL_USER: "a", EMAIL_PASS: "b" })

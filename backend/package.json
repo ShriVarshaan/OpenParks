@@ -9,7 +9,7 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node scripts/seed.js",
-    "db:reset": "prisma migrate reset --force",
+    "db:reset": "prisma migrate reset --force && node scripts/seed.js",
     "setup": "prisma migrate deploy && node scripts/seed.js",
     "parks:fetch": "node scripts/fetch-parks.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",

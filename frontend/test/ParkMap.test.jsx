@@ -35,6 +35,14 @@ vi.mock('maplibre-gl', () => ({
       getCanvas: vi.fn().mockReturnValue({ style: {} }),
       getZoom: vi.fn().mockReturnValue(15),
       setMaxBounds: vi.fn(),
+      cameraForBounds: vi.fn().mockReturnValue({ zoom: 15 }),
+      getMinZoom: vi.fn().mockReturnValue(13),
+      setMinZoom: vi.fn(),
+      getCenter: vi.fn().mockReturnValue({ lng: -1.905, lat: 52.4484 }),
+      fitBounds: vi.fn(),
+    })),
+    LngLatBounds: vi.fn().mockImplementation(([[w, s], [e, n]]) => ({
+      contains: ({ lng, lat }) => lng >= w && lng <= e && lat >= s && lat <= n,
     })),
     NavigationControl: vi.fn(),
     ScaleControl: vi.fn(),
@@ -114,6 +122,44 @@ describe('MapRenderer (ParkMap)', () => {
     await waitFor(() => expect(map.setMaxBounds).toHaveBeenCalledTimes(1))
     const [[w, s], [e, n]] = map.setMaxBounds.mock.calls[0][0]
     expect([w, s, e, n].map((v) => Number(v.toFixed(6)))).toEqual([-2.51, 51.99, -2.39, 52.11])
+  })
+
+  const loadParksOnMap = async (parks, setup = () => {}) => {
+    mockApiAfterLoad(parks)
+    render(
+      <BrowserRouter>
+        <MapRenderer />
+      </BrowserRouter>
+    )
+    const map = maplibregl.Map.mock.results[0].value
+    setup(map)
+    map.on.mock.calls.find(([event]) => event === 'load')[1]()
+    await waitFor(() => expect(map.setMaxBounds).toHaveBeenCalled())
+    return map
+  }
+  const parksAround = (west, east, south, north) => ({
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]] } }],
+  })
+
+  it('allows zooming out far enough to see every park when they span more than one screen', async () => {
+    const map = await loadParksOnMap(parksAround(-2.5, -1.8, 52.0, 52.5), (m) => m.cameraForBounds.mockReturnValue({ zoom: 10.6 }))
+
+    expect(map.setMinZoom).toHaveBeenCalledWith(10)
+  })
+
+  it('moves the view to the parks when the start point is outside them', async () => {
+    const parks = parksAround(-2.5, -2.4, 52.0, 52.1)
+    const map = await loadParksOnMap(parks)
+
+    expect(map.fitBounds).toHaveBeenCalledWith(map.setMaxBounds.mock.calls[0][0], { animate: false })
+  })
+
+  it('leaves the view and zoom limits alone when the start point is among the parks', async () => {
+    const map = await loadParksOnMap(parksAround(-1.95, -1.87, 52.43, 52.47))
+
+    expect(map.fitBounds).not.toHaveBeenCalled()
+    expect(map.setMinZoom).not.toHaveBeenCalled()
   })
 
   it('keeps the default pan limits when no parks load', async () => {

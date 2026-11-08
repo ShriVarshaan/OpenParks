@@ -284,7 +284,16 @@ export default function MapRenderer() {
 
           // Let users pan to every park in the database, not just the original area.
           const bounds = computeBounds(r.data)
-          if (bounds) map.setMaxBounds(bounds)
+          if (bounds) {
+            map.setMaxBounds(bounds)
+            // Parks spread wider than a screen at the minimum zoom: allow zooming out to see them all.
+            const fit = map.cameraForBounds(bounds)
+            if (fit && fit.zoom < map.getMinZoom()) map.setMinZoom(Math.floor(fit.zoom))
+            // The fixed start view may be outside the parks (e.g. the original area was replaced).
+            if (!new maplibregl.LngLatBounds(bounds).contains(map.getCenter())) {
+              map.fitBounds(bounds, { animate: false })
+            }
+          }
 
           map.addSource('park-boundary', {
             type: 'geojson',

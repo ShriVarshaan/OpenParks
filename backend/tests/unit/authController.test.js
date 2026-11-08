@@ -77,7 +77,7 @@ describe("authController - signup", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "User exists already" });
   });
 
-  test("creates a new user and returns token", async () => {
+  test("creates a new user without issuing a token", async () => {
     const req = {
       body: {
         email: "new@example.com",
@@ -106,15 +106,11 @@ describe("authController - signup", () => {
         username: "newuser",
       },
     });
-    expect(mockSign).toHaveBeenCalledWith(
-      { id: 2 },
-      "testsecret",
-      { expiresIn: "7d" }
-    );
+    // No token until the email is verified (verify-otp issues it).
+    expect(mockSign).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       message: "created successfully",
-      token: "fake-jwt-token",
       user: { id: 2, email: "new@example.com" },
     });
   });

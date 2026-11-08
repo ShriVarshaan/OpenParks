@@ -134,17 +134,13 @@ describe("signup", () => {
             });
         });
 
-        it("signs a JWT containing the new user's id", async () => {
+        it("does not sign a JWT — the account is unverified until the OTP is checked", async () => {
             await signup(buildReq(signupBody), buildRes());
 
-            expect(jwt.sign).toHaveBeenCalledWith(
-                { id: mockNewUser.id },
-                process.env.JWT_SECRET,
-                { expiresIn: "7d" }
-            );
+            expect(jwt.sign).not.toHaveBeenCalled();
         });
 
-        it("returns 201 with a message, token, and user object", async () => {
+        it("returns 201 with a message and user object, but no token", async () => {
             const res = buildRes();
 
             await signup(buildReq(signupBody), res);
@@ -152,7 +148,6 @@ describe("signup", () => {
             expect(res.status).toHaveBeenCalledWith(201);
             expect(res.json).toHaveBeenCalledWith({
                 message: "created successfully",
-                token: "mock.jwt.token",
                 user: { id: mockNewUser.id, email: mockNewUser.email },
             });
         });

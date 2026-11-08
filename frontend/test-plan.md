@@ -61,6 +61,8 @@ Each component is tested in complete isolation. API calls, navigation, toast not
 | UT-LP-08a | Says the server cannot be reached when login gets no response | API.post rejects with no `response` (network error) | toast.error called with 'Cannot reach the server. Is the backend running?', not 'Invalid credentials' | Network toast shown | PASS |
 | UT-LP-08b | Shows a generic error when login fails on the server | API.post rejects with 500 | toast.error called with 'Something went wrong, please try again', not 'Invalid credentials' | Generic toast shown | PASS |
 | UT-LP-08c | Says the server cannot be reached when sign-up gets no response | Registration submit; API.post rejects with no `response` | toast.error called with 'Cannot reach the server. Is the backend running?' | Network toast shown | PASS |
+| UT-LP-08d | Does not store a token on sign-up | Signup resolves with a token | Success toast; `localStorage.token` stays null (login happens after OTP verify) | No token stored | PASS |
+| UT-LP-08e | Shows a generic error when sign-up fails on the server | Signup rejects with 500 | toast.error 'Something went wrong, please try again', not 'Invalid user/email/password fields' | Generic toast shown | PASS |
 
 ### 4.1.3 Registration Flow
 

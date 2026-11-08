@@ -78,7 +78,7 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
 | UT-AU-01 | Returns 409 if user already exists | `email: test@example.com`, `findUnique` returns existing user | `status 409`, body: `{ message: 'User exists already' }` | status 409 | PASS |
-| UT-AU-02 | Creates new user and returns JWT | Valid email/password/username, `findUnique` returns null | `status 201`, body includes `token` and `user {id, email}` | status 201 with `fake-jwt-token` | PASS |
+| UT-AU-02 | Creates new user without issuing a JWT (unverified until OTP) | Valid email/password/username, `findUnique` returns null | `status 201`, body `{ message, user }` with no `token`; `jwt.sign` not called | status 201 | PASS |
 | UT-AU-03 | Returns 500 if signup throws | `findUnique` rejects with DB error | `status 500`, body: `{ message: 'Sign up unsuccessful' }` | status 500 | PASS |
 
 #### 4.1.2 `login()`
@@ -99,6 +99,14 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | UT-VE-01 | Sends a new OTP to the email address | `oneTimePasswords.findFirst` → null | `sendVerification('a@example.com')`; `status 401`, `{ message: 'No active OTP, new OTP sent' }` | as expected | PASS |
 | UT-VE-02 | Awaits the new OTP being sent | `sendVerification` resolves after a delay | Controller resolves only after the send settles | as expected | PASS |
 | UT-VE-03 | Answers 500 instead of crashing when the send fails | `sendVerification` rejects | `status 500`, `{ message: 'Could not send a new OTP, try again later' }`; no unhandled rejection | as expected | PASS |
+
+#### 4.1.4 `verifyJwtPayload()` (config/passport.js)
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-PP-01 | Accepts a token for a verified user | `findUnique` → `{ Verified: true }` | `done(null, user)` | as expected | PASS |
+| UT-PP-02 | Rejects a token for an unverified user | `findUnique` → `{ Verified: false }` | `done(null, false)` | as expected | PASS |
+| UT-PP-03 | Rejects a token for a deleted user | `findUnique` → null | `done(null, false)` | as expected | PASS |
 
 ### 4.2 parkController
 
@@ -216,6 +224,7 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | UT-SR-03b | Returns the created row from `INSERT … RETURNING` | `$queryRaw` resolves `[{ id: 7 }]` | `$executeRaw` not called; SQL returns `ST_AsGeoJSON(location)`; `status 201`, body `{ id: 7 }` | as expected | PASS |
 | DB-SR-01 | Database rejects a report point that is not SRID 4326 (`tests/db/safetyReport.db.test.js`) | Raw insert with SRID 4236 into `openparks_test` | Insert rejected with an SRID error | rejected | PASS |
 | DB-SR-02 | A 4326 report point can be compared with park outlines | Raw insert with SRID 4326 inside the fixture Cannon Hill Park | `ST_Covers(park, report)` is true | true | PASS |
+| DB-SR-03 | `createNewReport` against the real DB | Controller called with stub req/res, point inside fixture Cannon Hill | `status 201`; body has numeric `id`, `status: 'OPEN'`, GeoJSON Point location; stored SRID is 4326 | as expected | PASS |
 
 #### 4.5.3 `updateReport()`
 
@@ -297,8 +306,8 @@ Integration tests run against the full Express application stack including authe
 | UT-AU-04 | `signup` sends a verification email to the new user | authController, Prisma, sendVerification | Mock `findUnique` to resolve `null`; mock `create`, `bcrypt.hash`, `jwt.sign`; call `signup` | `sendVerification` called once with `signupBody.email` | `sendVerification` called once with `"john@example.com"` | PASS |
 | UT-AU-05 | `signup` hashes the password with salt round of 10 | authController, bcrypt | Mock prerequisites; call `signup` with `signupBody` | `bcrypt.hash` called with `(signupBody.password, 10)` | `bcrypt.hash` called with `("plaintext123", 10)` | PASS |
 | UT-AU-06 | `signup` creates user with email, hashed password, and username | authController, Prisma, bcrypt | Mock prerequisites; call `signup` with `signupBody` | `prisma.user.create` called with `{ data: { email, password: "hashed_password", username } }` | `prisma.user.create` called with correct data object | PASS |
-| UT-AU-07 | `signup` signs a JWT containing the new user's ID | authController, JWT | Mock prerequisites; call `signup` with `signupBody` | `jwt.sign` called with `({ id: mockNewUser.id }, JWT_SECRET, { expiresIn: "7d" })` | `jwt.sign` called with correct payload and options | PASS |
-| UT-AU-08 | `signup` returns 201 with message, token, and user object | authController, Prisma, bcrypt, JWT | Mock prerequisites; call `signup`; inspect response | Response status 201; `res.json` called with `{ message: "created successfully", token: "mock.jwt.token", user: { id, email } }` | Response status 201; `res.json` called with correct payload | PASS |
+| UT-AU-07 | `signup` does not sign a JWT — the account is unverified until the OTP is checked | authController, JWT | Mock prerequisites; call `signup` with `signupBody` | `jwt.sign` not called | `jwt.sign` not called | PASS |
+| UT-AU-08 | `signup` returns 201 with message and user object, but no token | authController, Prisma, bcrypt | Mock prerequisites; call `signup` | Response status 201; `res.json` called with `{ message: "created successfully", user }` | as expected | PASS |
 | UT-AU-09 | `signup` does not expose hashed password in the response | authController, Prisma, bcrypt, JWT | Mock prerequisites; call `signup`; inspect `payload.user` | `payload.user` does not have a `password` property | `payload.user` had no `password` property | PASS |
 | UT-AU-10 | `signup` returns 500 when `prisma.user.create` throws | authController, Prisma | Mock `findUnique` to resolve `null`; mock `bcrypt.hash`; mock `create` to reject; call `signup` | Response status 500; `res.json` called with `{ message: "Sign up unsuccessful" }` | Response status 500; `res.json` called with `{ message: "Sign up unsuccessful" }` | PASS |
 | UT-AU-11 | `signup` does not propagate thrown errors | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("Timeout")`; await `signup` | Promise resolves without throwing | Promise resolved without throwing | PASS |

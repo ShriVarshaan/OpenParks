@@ -66,17 +66,18 @@ export default function LoginPage({ onLogin }) {
       }
     }else{
       try{
-        const res = await API.post("/api/auth/signup", {username: form.username, email: form.email, password: form.password})
+        await API.post("/api/auth/signup", {username: form.username, email: form.email, password: form.password})
         setPendingEmail(form.email)
         setOtpStep(true)
         toast.success("Check your email for verification code")
-        localStorage.setItem("token", res.data.token)
 
       } catch (err){
         if (!err.response){
           toast.error(NETWORK_ERROR)
         } else if (err.response.status === 409){
           toast.error("User exists already, login")
+        } else if (err.response.status >= 500){
+          toast.error(GENERIC_ERROR)
         }else if (err.response?.data?.error){
           console.log(err.response.data.error)
           toast.error(err.response.data.error)

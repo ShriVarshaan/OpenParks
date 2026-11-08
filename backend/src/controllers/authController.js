@@ -21,18 +21,10 @@ export const signup = async (req, res, next) =>{
                 username: req.body.username
             }
         })
-        
-        
-        
-        const token = jwt.sign(
-            {id: newUser.id},
-            process.env.JWT_SECRET,
-            {expiresIn: "7d"}
-        )
 
+        // No token yet: the account is unverified until /verify-otp, which issues one.
         return res.status(201).json({
             message: "created successfully",
-            token: token,
             user: { id: newUser.id, email: newUser.email }
         })
     } catch (err){

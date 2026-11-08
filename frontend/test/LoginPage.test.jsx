@@ -232,6 +232,41 @@ describe('LoginPage', () => {
     })
   })
 
+  const submitSignup = async () => {
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    )
+    fireEvent.click(screen.getByText('Register'))
+    await userEvent.type(screen.getByPlaceholderText('Full name'), 'New User')
+    await userEvent.type(screen.getByPlaceholderText('Email'), 'new@test.com')
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'password123')
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  }
+
+  it('does not log the user in on sign-up — only after the email code is verified', async () => {
+    API.post.mockResolvedValueOnce({ data: { token: 'unverified-token', user: { id: 2 } } })
+
+    await submitSignup()
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith('Check your email for verification code')
+    })
+    expect(localStorage.getItem('token')).toBeNull()
+  })
+
+  it('shows a generic error, not invalid fields, when sign-up fails on the server', async () => {
+    API.post.mockRejectedValueOnce({ response: { status: 500, data: { message: 'Sign up unsuccessful' } } })
+
+    await submitSignup()
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Something went wrong, please try again')
+    })
+    expect(toast.error).not.toHaveBeenCalledWith('Invalid user/email/password fields')
+  })
+
   it('submits registration request with username email and password', async () => {
     API.post.mockResolvedValueOnce({
       data: { token: 'reg-token-123', user: { id: 2, email: 'new@test.com' } }

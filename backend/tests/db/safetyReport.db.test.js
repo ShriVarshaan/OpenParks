@@ -1,5 +1,6 @@
 // Runs against the real Docker PostGIS test database (openparks_test), never the dev DB.
 // Requires `docker compose up -d --wait`. Run with: npm run test:db
+import { jest } from "@jest/globals";
 import { execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -16,6 +17,7 @@ process.env.DB_SSL = "false";
 
 const { default: prisma } = await import("../../src/config/prisma.js");
 const { seed } = await import("../../scripts/seed.js");
+const { createNewReport } = await import("../../src/controllers/safetyReport.js");
 
 let userId;
 let parkId;
@@ -51,4 +53,32 @@ test("accepts a 4326 report point and can compare it with park outlines", async 
     SELECT ST_Covers(p.location, r.location) AS inside
     FROM "SafetyReport" r JOIN "Park" p ON p.id = r.park_id`;
   expect(row.inside).toBe(true);
+});
+
+test("createNewReport stores the point and answers 201 with the new row, location as GeoJSON", async () => {
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis() };
+  const req = {
+    user: { id: userId },
+    body: {
+      park_id: parkId,
+      description: "Broken fence",
+      heading: "Hazard",
+      location: { type: "Point", coordinates: [-1.905, 52.445] },
+    },
+  };
+
+  await createNewReport(req, res);
+
+  expect(res.status).toHaveBeenCalledWith(201);
+  const body = res.json.mock.calls[0][0];
+  expect(body).toMatchObject({
+    id: expect.any(Number),
+    park_id: parkId,
+    description: "Broken fence",
+    status: "OPEN",
+    location: { type: "Point", coordinates: [-1.905, 52.445] },
+  });
+  const [row] = await prisma.$queryRaw`
+    SELECT ST_SRID(location::geometry) AS srid FROM "SafetyReport" WHERE id = ${body.id}`;
+  expect(row.srid).toBe(4326);
 });

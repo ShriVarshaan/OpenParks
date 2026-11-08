@@ -229,7 +229,7 @@
 - [ ] **Step 3: Implement** `scripts/seed.js`.
 - [ ] **Step 4: Run again.** `npm run test:db`. Expected: PASS.
 - [ ] **Step 5: Verify against the real data.**
-  1. `npx prisma migrate reset --force`. This runs the seed through `prisma.config.ts`. Expected log: parks ≈ 47, trails > 0, amenities > 0, demoUser true.
+  1. Change the `db:reset` script to `prisma migrate reset --force && node scripts/seed.js` (Prisma 7's `migrate reset` no longer seeds), then run `npm run db:reset`. Expected log: parks ≈ 47, trails > 0, amenities > 0, demoUser true.
   2. `npm start`, then `curl -s localhost:3000/api/parks | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).features.length))"`. Expected: ≈ 47.
   3. `npm run db:seed` again. Expected: the same counts.
 - [ ] **Step 6: Commit.** `git commit -m "feat(data): idempotent PostGIS seed with demo user and DB tests"`
@@ -352,7 +352,7 @@ The current insert uses SRID `4236` and calls `$executeRaw`, which returns a row
   1. Temporarily add an area `[52.40,-1.98,52.42,-1.94]` to `parks.config.json` (it includes Woodlands Park and Manor Farm Park).
   2. Run `npm run parks:fetch && npm run db:seed`.
   3. Reload the map. Expected: you can pan to Manor Farm Park.
-  4. Revert the config with `git checkout backend/scripts/parks.config.json backend/prisma/data`, then run `npx prisma migrate reset --force` to restore the committed data set.
+  4. Revert the config with `git checkout backend/scripts/parks.config.json backend/prisma/data`, then run `npm run db:reset` to restore the committed data set.
 - [ ] **Step 6: Commit.** `git commit -m "feat(map): derive pan bounds from loaded parks"`
 
 ---

@@ -47,7 +47,7 @@ const mockExistingUser = {
     email: "jane@example.com",
     password: "hashed_password",
     username: "jane",
-    validated: true,
+    Verified: true,
 };
 
 const mockNewUser = {
@@ -134,17 +134,13 @@ describe("signup", () => {
             });
         });
 
-        it("signs a JWT containing the new user's id", async () => {
+        it("does not sign a JWT — the account is unverified until the OTP is checked", async () => {
             await signup(buildReq(signupBody), buildRes());
 
-            expect(jwt.sign).toHaveBeenCalledWith(
-                { id: mockNewUser.id },
-                process.env.JWT_SECRET,
-                { expiresIn: "7d" }
-            );
+            expect(jwt.sign).not.toHaveBeenCalled();
         });
 
-        it("returns 201 with a message, token, and user object", async () => {
+        it("returns 201 with a message and user object, but no token", async () => {
             const res = buildRes();
 
             await signup(buildReq(signupBody), res);
@@ -152,7 +148,6 @@ describe("signup", () => {
             expect(res.status).toHaveBeenCalledWith(201);
             expect(res.json).toHaveBeenCalledWith({
                 message: "created successfully",
-                token: "mock.jwt.token",
                 user: { id: mockNewUser.id, email: mockNewUser.email },
             });
         });
@@ -241,7 +236,7 @@ describe("login", () => {
 
     describe("403 - email not verified", () => {
         it("returns 403 when the user has not verified their email", async () => {
-            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, validated: false });
+            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, Verified: false });
             bcrypt.compare.mockResolvedValue(true);
             sendVerification.mockResolvedValue();
             const res = buildRes();
@@ -255,7 +250,7 @@ describe("login", () => {
         });
 
         it("re-sends the verification email when the user is unverified", async () => {
-            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, validated: false });
+            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, Verified: false });
             bcrypt.compare.mockResolvedValue(true);
             sendVerification.mockResolvedValue();
 
@@ -266,7 +261,7 @@ describe("login", () => {
         });
 
         it("does not issue a JWT when the user is unverified", async () => {
-            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, validated: false });
+            prisma.user.findUnique.mockResolvedValue({ ...mockExistingUser, Verified: false });
             bcrypt.compare.mockResolvedValue(true);
             sendVerification.mockResolvedValue();
 
@@ -322,15 +317,15 @@ describe("login", () => {
         });
     });
 
-    describe("401 - unexpected error", () => {
-        it("returns 401 when prisma throws unexpectedly", async () => {
+    describe("500 - unexpected error", () => {
+        it("returns 500 when prisma throws unexpectedly", async () => {
             prisma.user.findUnique.mockRejectedValue(new Error("DB timeout"));
             const res = buildRes();
 
             await login(buildReq(loginBody), res);
 
-            expect(res.status).toHaveBeenCalledWith(401);
-            expect(res.json).toHaveBeenCalledWith({ message: "Invalid credentials" });
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({ message: "Login failed" });
         });
 
         it("does not throw — error is absorbed into the response", async () => {

@@ -1,21 +1,13 @@
+import "../config/loadEnv.js"
 import prisma from "../config/prisma.js"
 import nodemailer from 'nodemailer';
 import crypto from "crypto"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import dotenv from "dotenv"
-dotenv.config()
+import { buildTransportOptions } from "../config/env.js"
 
 export const sendVerification = async(recipient) =>{
-    const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: false, // true for port 465, false for 587
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    });
+    const transporter = nodemailer.createTransport(buildTransportOptions());
 
     try {
         await transporter.verify()

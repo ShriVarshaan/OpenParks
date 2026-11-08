@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  extensions = [postgis, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
+  extensions = [postgis]
 }
 
 model User {
@@ -25,10 +25,15 @@ model Park {
   mobility_data     String?                  @db.VarChar
   maintenance_stats String?                  @db.VarChar
   location          Unsupported("geography")
+  osm_type          String?                  @db.VarChar(16)
+  osm_id            BigInt?
   amenities         ParkAmenity[]
   reviews           Review[]
   SafetyReport      SafetyReport[]
   trails            trails[]
+
+  @@unique([osm_type, osm_id])
+  @@index([location], type: Gist)
 }
 
 model ParkAmenity {
@@ -36,7 +41,12 @@ model ParkAmenity {
   park_id  Int
   name     String                   @db.VarChar
   location Unsupported("geometry")?
+  osm_type String?                  @db.VarChar(16)
+  osm_id   BigInt?
   park     Park                     @relation(fields: [park_id], references: [id])
+
+  @@unique([osm_type, osm_id])
+  @@index([location], type: Gist)
 }
 
 model SafetyReport {
@@ -46,11 +56,13 @@ model SafetyReport {
   image       Bytes?
   status      ReportStatus             @default(OPEN)
   created_at  DateTime                 @default(now())
-  location    Unsupported("geography")
+  location    Unsupported("geography(Point,4326)")
   heading     String?
   park_id     Int?
   Park        Park?                    @relation(fields: [park_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        User                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([location], type: Gist)
 }
 model Review {
   id         Int      @id @default(autoincrement())
@@ -64,15 +76,6 @@ model Review {
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model spatial_ref_sys {
-  srid      Int     @id
-  auth_name String? @db.VarChar(256)
-  auth_srid Int?
-  srtext    String? @db.VarChar(2048)
-  proj4text String? @db.VarChar(2048)
-}
-
 model trails {
   id      Int                      @id @default(autoincrement())
   park_id Int?
@@ -82,6 +85,9 @@ model trails {
   surface String?                  @db.VarChar(50)
   geom    Unsupported("geometry")?
   Park    Park?                    @relation(fields: [park_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([park_id, osm_id])
+  @@index([geom], type: Gist)
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.

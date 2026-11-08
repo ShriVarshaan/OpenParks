@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import API from "../api/axiosInstance.js"
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon"
 import { point } from "@turf/helpers"
+import { computeBounds } from '../utils/geo'
 
 const TRAIL_TYPES = [
   { label: 'Footpath',       color: '#5a9e4f' },
@@ -267,6 +268,7 @@ export default function MapRenderer() {
       zoom: 15.4,
       minZoom: 13,
       maxZoom: 19,
+      // Fallback until the parks load; then the limits grow to cover every park (see below).
       maxBounds: [[-1.96, 52.42], [-1.86, 52.48]],
     })
 
@@ -279,6 +281,19 @@ export default function MapRenderer() {
         .then(r => {
 
           parkPolygonsRef.current = r.data
+
+          // Let users pan to every park in the database, not just the original area.
+          const bounds = computeBounds(r.data)
+          if (bounds) {
+            map.setMaxBounds(bounds)
+            // Parks spread wider than a screen at the minimum zoom: allow zooming out to see them all.
+            const fit = map.cameraForBounds(bounds)
+            if (fit && fit.zoom < map.getMinZoom()) map.setMinZoom(Math.floor(fit.zoom))
+            // The fixed start view may be outside the parks (e.g. the original area was replaced).
+            if (!new maplibregl.LngLatBounds(bounds).contains(map.getCenter())) {
+              map.fitBounds(bounds, { animate: false })
+            }
+          }
 
           map.addSource('park-boundary', {
             type: 'geojson',
@@ -588,7 +603,7 @@ export default function MapRenderer() {
               OpenParks
             </h1>
             <span style={{ fontSize: 12, fontWeight: 300, color: '#c8e6c0', letterSpacing: 2, textTransform: 'uppercase', display: 'block', marginTop: -4 }}>
-              Cannon Hill · Birmingham
+              Birmingham
             </span>
           </div>
         </div>

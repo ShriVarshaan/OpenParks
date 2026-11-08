@@ -1,3 +1,4 @@
+import "../config/loadEnv.js"
 /*connected to a html object of an entry box to enter the one time password
 takes input and checks to see if that is what is stored in the database
 If so, it then maeks the account which is attached to that email be verified
@@ -7,15 +8,18 @@ import prisma from "../config/prisma.js"
 import nodemailer from "nodemailer"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import dotenv from "dotenv"
 import { sendVerification } from "./sendVerification.js";
-dotenv.config()
 
 export const checkValidOTP = async(req,res) =>{
     try{
         const OTP = await prisma.oneTimePasswords.findFirst({where: {email: req.body.email, active: true}})
         if(!OTP){
-            sendVerification(req,res,req.body.email)
+            // Awaited: an un-awaited rejection here (e.g. SMTP down) used to crash the server.
+            try {
+                await sendVerification(req.body.email)
+            } catch (err) {
+                return res.status(500).json({message: "Could not send a new OTP, try again later"})
+            }
             return res.status(401).json({message: "No active OTP, new OTP sent"})
         }
         const now = new Date();

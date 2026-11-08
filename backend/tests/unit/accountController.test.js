@@ -40,6 +40,18 @@ describe("userController - getUser", () => {
     expect(res.json).toHaveBeenCalledWith(fakeUser);
   });
 
+  test("never sends the password hash to the client", async () => {
+    mockFindUnique.mockResolvedValue({ id: 1, username: "demo", email: "d@x.test", password: "$2b$10$hash", Verified: true });
+    const res = createRes();
+
+    await getUser({ user: { id: 1 } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    const body = res.json.mock.calls[0][0];
+    expect(body).not.toHaveProperty("password");
+    expect(body).toEqual({ id: 1, username: "demo", email: "d@x.test", Verified: true });
+  });
+
   test("returns 404 when user is not found", async () => {
     const req = { user: { id: 99 } };
     const res = createRes();

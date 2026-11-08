@@ -3,7 +3,12 @@ import prisma from "../config/prisma.js"
 export const getAmenities = async (req, res) => {
     try{
         const amenities = await prisma.parkAmenity.findMany({where: {park_id: Number(req.params.id)}})
-        return res.status(200).json(amenities)
+        // osm_id is a BigInt column, which JSON.stringify cannot serialise
+        const serialisable = amenities.map((amenity) => ({
+            ...amenity,
+            osm_id: amenity.osm_id == null ? amenity.osm_id : amenity.osm_id.toString(),
+        }))
+        return res.status(200).json(serialisable)
     } catch (err) {
         return res.status(500).json({message: "Internal server error"})
     }

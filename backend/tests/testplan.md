@@ -78,7 +78,7 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
 | UT-AU-01 | Returns 409 if user already exists | `email: test@example.com`, `findUnique` returns existing user | `status 409`, body: `{ message: 'User exists already' }` | status 409 | PASS |
-| UT-AU-02 | Creates new user and returns JWT | Valid email/password/username, `findUnique` returns null | `status 201`, body includes `token` and `user {id, email}` | status 201 with `fake-jwt-token` | PASS |
+| UT-AU-02 | Creates new user without issuing a JWT (unverified until OTP) | Valid email/password/username, `findUnique` returns null | `status 201`, body `{ message, user }` with no `token`; `jwt.sign` not called | status 201 | PASS |
 | UT-AU-03 | Returns 500 if signup throws | `findUnique` rejects with DB error | `status 500`, body: `{ message: 'Sign up unsuccessful' }` | status 500 | PASS |
 
 #### 4.1.2 `login()`
@@ -88,9 +88,25 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | UT-AU-04 | Returns 401 if user not found | `findUnique` returns null | `status 401`, body: `{ message: 'Invalid credentials' }` | status 401 | PASS |
 | UT-AU-05 | Returns 401 if password is wrong | `bcrypt.compare` returns false | `status 401`, body: `{ message: 'Invalid credentials' }` | status 401 | PASS |
 | UT-AU-06 | Logs in and returns JWT on valid credentials | User found, `bcrypt.compare` returns true | `status 200`, body includes `token` and `user {id, email}` | status 200 with `login-token` | PASS |
-| UT-AU-07 | Returns 401 if login throws | `findUnique` rejects with DB failure | `status 401`, body: `{ message: 'Invalid credentials' }` | status 401 | PASS |
+| UT-AU-07 | Returns 500 (not 401) if login throws | `findUnique` rejects with DB failure | `status 500`, body: `{ message: 'Login failed' }` | status 500 | PASS |
 
 ---
+
+#### 4.1.3 `checkValidOTP()` (validateEmail.js) — no active OTP
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-VE-01 | Sends a new OTP to the email address | `oneTimePasswords.findFirst` → null | `sendVerification('a@example.com')`; `status 401`, `{ message: 'No active OTP, new OTP sent' }` | as expected | PASS |
+| UT-VE-02 | Awaits the new OTP being sent | `sendVerification` resolves after a delay | Controller resolves only after the send settles | as expected | PASS |
+| UT-VE-03 | Answers 500 instead of crashing when the send fails | `sendVerification` rejects | `status 500`, `{ message: 'Could not send a new OTP, try again later' }`; no unhandled rejection | as expected | PASS |
+
+#### 4.1.4 `verifyJwtPayload()` (config/passport.js)
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-PP-01 | Accepts a token for a verified user | `findUnique` → `{ Verified: true }` | `done(null, user)` | as expected | PASS |
+| UT-PP-02 | Rejects a token for an unverified user | `findUnique` → `{ Verified: false }` | `done(null, false)` | as expected | PASS |
+| UT-PP-03 | Rejects a token for a deleted user | `findUnique` → null | `done(null, false)` | as expected | PASS |
 
 ### 4.2 parkController
 
@@ -152,6 +168,7 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 |---|---|---|---|---|---|
 | UT-RV-03 | Returns 404 if park does not exist | `findUnique` returns null for park | `status 404`, body: `{ message: 'Park not found' }` | status 404 | PASS |
 | UT-RV-04 | Creates review for valid park | Park found, `create` resolves with new review | `status 201`, body: created review object | status 201 with review data | PASS |
+| UT-RV-04a | Saves the review title sent by the form | Body `{ title: 'Lovely lake', content, rating }` | `create` data includes `title: 'Lovely lake'` | as expected | PASS |
 | UT-RV-05 | Returns 500 on database query failure | `create` rejects with DB error | `status 500`, body: `{mrssage: "Internal server error"}` | status 500 | PASS |
 
 #### 4.4.3 `getAllReviewsUser()`
@@ -201,8 +218,13 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
-| UT-SR-03 | Creates a new safety report with PostGIS geometry | Valid body with coordinates, `user.id: 5`, `$executeRaw` resolves | `status 201`, body: created report object | status 201  | PASS |
-| UT-SR-04 | Returns 500 if creation fails | `$executeRaw` rejects with DB failure | `status 500`, body: `{ error: 'Internal server error' }` | status 500 | PASS |
+| UT-SR-03 | Creates a new safety report with PostGIS geometry | Valid body with coordinates, `user.id: 5`, `$queryRaw` resolves | `status 201`, body: created report object | status 201  | PASS |
+| UT-SR-04 | Returns 500 if creation fails | `$queryRaw` rejects with DB failure | `status 500`, body: `{ error: 'Internal server error' }` | status 500 | PASS |
+| UT-SR-03a | Stores the report location in SRID 4326 | Body with `coordinates: [-1.9, 52.45]` | SQL passed to `$queryRaw` contains `4326`, not `4236`; values include `-1.9`, `52.45` | as expected | PASS |
+| UT-SR-03b | Returns the created row from `INSERT … RETURNING` | `$queryRaw` resolves `[{ id: 7 }]` | `$executeRaw` not called; SQL returns `ST_AsGeoJSON(location)`; `status 201`, body `{ id: 7 }` | as expected | PASS |
+| DB-SR-01 | Database rejects a report point that is not SRID 4326 (`tests/db/safetyReport.db.test.js`) | Raw insert with SRID 4236 into `openparks_test` | Insert rejected with an SRID error | rejected | PASS |
+| DB-SR-02 | A 4326 report point can be compared with park outlines | Raw insert with SRID 4326 inside the fixture Cannon Hill Park | `ST_Covers(park, report)` is true | true | PASS |
+| DB-SR-03 | `createNewReport` against the real DB | Controller called with stub req/res, point inside fixture Cannon Hill | `status 201`; body has numeric `id`, `status: 'OPEN'`, GeoJSON Point location; stored SRID is 4326 | as expected | PASS |
 
 #### 4.5.3 `updateReport()`
 
@@ -231,6 +253,7 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
 | UT-AC-01 | Returns user when found | `findUnique` returns user body | `status 200`, body: user body | status 200 | PASS |
+| UT-AC-01a | Never sends the password hash | `findUnique` returns a user with `password` | `status 200`, body has no `password` field | as expected | PASS |
 | UT-AC-02 | Returns 404 when user is not found | `findUnique` returns `null` | `status 404`, body: `{message: "User not found"}` | status 404 | PASS |
 | UT-AC-03 | Returns 500 on database error in getUser | `findUnique` rejects with DB error | `status 500`, body: error object | status 500 | PASS |
 
@@ -283,8 +306,8 @@ Integration tests run against the full Express application stack including authe
 | UT-AU-04 | `signup` sends a verification email to the new user | authController, Prisma, sendVerification | Mock `findUnique` to resolve `null`; mock `create`, `bcrypt.hash`, `jwt.sign`; call `signup` | `sendVerification` called once with `signupBody.email` | `sendVerification` called once with `"john@example.com"` | PASS |
 | UT-AU-05 | `signup` hashes the password with salt round of 10 | authController, bcrypt | Mock prerequisites; call `signup` with `signupBody` | `bcrypt.hash` called with `(signupBody.password, 10)` | `bcrypt.hash` called with `("plaintext123", 10)` | PASS |
 | UT-AU-06 | `signup` creates user with email, hashed password, and username | authController, Prisma, bcrypt | Mock prerequisites; call `signup` with `signupBody` | `prisma.user.create` called with `{ data: { email, password: "hashed_password", username } }` | `prisma.user.create` called with correct data object | PASS |
-| UT-AU-07 | `signup` signs a JWT containing the new user's ID | authController, JWT | Mock prerequisites; call `signup` with `signupBody` | `jwt.sign` called with `({ id: mockNewUser.id }, JWT_SECRET, { expiresIn: "7d" })` | `jwt.sign` called with correct payload and options | PASS |
-| UT-AU-08 | `signup` returns 201 with message, token, and user object | authController, Prisma, bcrypt, JWT | Mock prerequisites; call `signup`; inspect response | Response status 201; `res.json` called with `{ message: "created successfully", token: "mock.jwt.token", user: { id, email } }` | Response status 201; `res.json` called with correct payload | PASS |
+| UT-AU-07 | `signup` does not sign a JWT — the account is unverified until the OTP is checked | authController, JWT | Mock prerequisites; call `signup` with `signupBody` | `jwt.sign` not called | `jwt.sign` not called | PASS |
+| UT-AU-08 | `signup` returns 201 with message and user object, but no token | authController, Prisma, bcrypt | Mock prerequisites; call `signup` | Response status 201; `res.json` called with `{ message: "created successfully", user }` | as expected | PASS |
 | UT-AU-09 | `signup` does not expose hashed password in the response | authController, Prisma, bcrypt, JWT | Mock prerequisites; call `signup`; inspect `payload.user` | `payload.user` does not have a `password` property | `payload.user` had no `password` property | PASS |
 | UT-AU-10 | `signup` returns 500 when `prisma.user.create` throws | authController, Prisma | Mock `findUnique` to resolve `null`; mock `bcrypt.hash`; mock `create` to reject; call `signup` | Response status 500; `res.json` called with `{ message: "Sign up unsuccessful" }` | Response status 500; `res.json` called with `{ message: "Sign up unsuccessful" }` | PASS |
 | UT-AU-11 | `signup` does not propagate thrown errors | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("Timeout")`; await `signup` | Promise resolves without throwing | Promise resolved without throwing | PASS |
@@ -304,7 +327,7 @@ Integration tests run against the full Express application stack including authe
 | UT-AU-20 | `login` returns 200 with message, token, and user object | authController, Prisma, bcrypt, JWT | Mock prerequisites for successful login; call `login`; inspect response | Response status 200; `res.json` called with `{ message: "logged in", token: "mock.jwt.token", user: { id, email } }` | Response status 200; `res.json` called with correct payload | PASS |
 | UT-AU-21 | `login` does not expose hashed password in the response | authController, Prisma, bcrypt, JWT | Mock prerequisites for successful login; call `login`; inspect `payload.user` | `payload.user` does not have a `password` property | `payload.user` had no `password` property | PASS |
 | UT-AU-22 | `login` does not send a verification email for a validated user | authController, sendVerification | Mock prerequisites for successful login; call `login` | `sendVerification` not called | `sendVerification` was not called | PASS |
-| UT-AU-23 | `login` returns 401 when Prisma throws unexpectedly | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("DB timeout")`; call `login` | Response status 401; `res.json` called with `{ message: "Invalid credentials" }` | Response status 401; `res.json` called with `{ message: "Invalid credentials" }` | PASS |
+| UT-AU-23 | `login` returns 500 when Prisma throws unexpectedly | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("DB timeout")`; call `login` | Response status 500; `res.json` called with `{ message: "Login failed" }` | Response status 500; `res.json` called with `{ message: "Login failed" }` | PASS |
 | UT-AU-24 | `login` does not propagate thrown errors | authController, Prisma | Mock `prisma.user.findUnique` to reject with `Error("Crash")`; await `login` | Promise resolves without throwing | Promise resolved without throwing | PASS |
 ---
 ### 5.2 Parks Endpoints
@@ -466,12 +489,12 @@ Integration tests run against the full Express application stack including authe
 #### 5.5.3 `createNewReport()`
 | ID | Scenario | Modules | Steps | Expected | Actual Result | Status |
 |---|---|---|---|---|---|---|
-| UT-SR-12 | `createNewReport` calls `$executeRaw` once | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[mockReport]`; call `createNewReport` with valid body | `prisma.$executeRaw` called exactly once | `prisma.$executeRaw` was called exactly once | PASS |
-| UT-SR-13 | `createNewReport` returns 201 with the first element of the result | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[mockReport]`; call `createNewReport` | Response status 201; `res.json` called with `mockReport` | Response status 201; `res.json` called with `mockReport` | PASS |
-| UT-SR-14 | `createNewReport` returns 201 with `undefined` when `$executeRaw` returns an empty array | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[]`; call `createNewReport` | Response status 201; `res.json` called with `undefined` | Response status 201; `res.json` called with `undefined` | PASS |
-| UT-SR-15 | `createNewReport` correctly extracts `lng` and `lat` from `body.location.coordinates` | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to resolve with `[mockReport]`; call `createNewReport` with `location: { coordinates: [-1.9, 52.48] }` | Promise resolves without throwing; `$executeRaw` called once | Promise resolved without throwing; `$executeRaw` called once | PASS |
-| UT-SR-16 | `createNewReport` returns 500 on a `$executeRaw` failure | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to reject with `Error("Insert failed")`; call `createNewReport` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | PASS |
-| UT-SR-17 | `createNewReport` does not propagate thrown errors | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$executeRaw` to reject with `Error("Timeout")`; await `createNewReport` | Promise resolves without throwing | Promise resolved without throwing | PASS |
+| UT-SR-12 | `createNewReport` calls `$queryRaw` once | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[mockReport]`; call `createNewReport` with valid body | `prisma.$queryRaw` called exactly once | `prisma.$queryRaw` was called exactly once | PASS |
+| UT-SR-13 | `createNewReport` returns 201 with the first element of the result | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[mockReport]`; call `createNewReport` | Response status 201; `res.json` called with `mockReport` | Response status 201; `res.json` called with `mockReport` | PASS |
+| UT-SR-14 | `createNewReport` returns 201 with `undefined` when `$queryRaw` returns an empty array | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[]`; call `createNewReport` | Response status 201; `res.json` called with `undefined` | Response status 201; `res.json` called with `undefined` | PASS |
+| UT-SR-15 | `createNewReport` correctly extracts `lng` and `lat` from `body.location.coordinates` | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to resolve with `[mockReport]`; call `createNewReport` with `location: { coordinates: [-1.9, 52.48] }` | Promise resolves without throwing; `$queryRaw` called once with `-1.9`, `52.48` and SRID `4326` | Promise resolved without throwing; `$queryRaw` called once with `-1.9`, `52.48` and SRID `4326` with `-1.9`, `52.48` and SRID `4326` | PASS |
+| UT-SR-16 | `createNewReport` returns 500 on a `$queryRaw` failure | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to reject with `Error("Insert failed")`; call `createNewReport` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | Response status 500; `res.json` called with `{ error: "Internal server error" }` | PASS |
+| UT-SR-17 | `createNewReport` does not propagate thrown errors | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.$queryRaw` to reject with `Error("Timeout")`; await `createNewReport` | Promise resolves without throwing | Promise resolved without throwing | PASS |
 
 #### 5.5.4 `updateReport()`
 

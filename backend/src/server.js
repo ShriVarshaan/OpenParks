@@ -1,5 +1,5 @@
+import "./config/loadEnv.js"
 import express from "express"
-import dotenv from "dotenv"
 import parkRoutes from "./routes/parkRoutes.js"
 import authRoutes from "./routes/authRoutes.js"
 import amenityRoutes from "./routes/amenitiesRoutes.js"
@@ -11,12 +11,13 @@ import cors from "cors"
 //import emailRoutes from "./routes/emailRoutes.js"
 import "./config/passport.js"
 import "./config/prisma.js"
+import { parseCorsOrigins } from "./config/env.js"
 
-dotenv.config();
 const app = express();
+const PORT = Number(process.env.PORT) || 3000
 
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: parseCorsOrigins(process.env.CORS_ORIGINS),
     credentials: true
 }))
 
@@ -32,6 +33,6 @@ app.use("/api/user", userRoutes)
 //app.use('/api/email', emailRoutes);
 
 
-app.listen(3000, () => {
-    console.log("Listening")
+app.listen(PORT, () => {
+    console.log(`Listening on port ${PORT}`)
 })

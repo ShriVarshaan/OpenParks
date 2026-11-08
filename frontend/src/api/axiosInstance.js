@@ -1,7 +1,8 @@
 import axios from "axios"
 
+// Set VITE_API_URL in frontend/.env to point at a different backend (see .env.example).
 const API = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
     withCredentials: true,
 })
 

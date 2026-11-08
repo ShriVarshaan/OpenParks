@@ -2,11 +2,19 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
     "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "node scripts/seed.js",
+    "db:reset": "prisma migrate reset --force && node scripts/seed.js",
+    "setup": "node scripts/ensure-env.js && prisma migrate deploy && node scripts/seed.js",
+    "parks:fetch": "node scripts/fetch-parks.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",
-    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration"
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration",
+    "test:db": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/db --runInBand"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +28,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "joi": "^18.0.2",
+    "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.3",
     "otplib": "^13.4.0",
     "passport": "^0.7.0",
@@ -30,6 +39,7 @@
   "devDependencies": {
     "@types/pg": "^8.18.0",
     "jest": "^30.2.0",
+    "osmtogeojson": "^3.0.0-beta.5",
     "prisma": "^7.5.0"
   },
   "jest": {
@@ -37,5 +47,8 @@
     "testMatch": [
       "**/tests/**/*.test.js"
     ]
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

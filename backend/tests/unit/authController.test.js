@@ -77,7 +77,7 @@ describe("authController - signup", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "User exists already" });
   });
 
-  test("creates a new user and returns token", async () => {
+  test("creates a new user without issuing a token", async () => {
     const req = {
       body: {
         email: "new@example.com",
@@ -106,15 +106,11 @@ describe("authController - signup", () => {
         username: "newuser",
       },
     });
-    expect(mockSign).toHaveBeenCalledWith(
-      { id: 2 },
-      "testsecret",
-      { expiresIn: "7d" }
-    );
+    // No token until the email is verified (verify-otp issues it).
+    expect(mockSign).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       message: "created successfully",
-      token: "fake-jwt-token",
       user: { id: 2, email: "new@example.com" },
     });
   });
@@ -173,7 +169,7 @@ describe("authController - login", () => {
       id: 1,
       email: "test@example.com",
       password: "hashedPassword",
-      validated: true,
+      Verified: true,
     });
     mockCompare.mockResolvedValue(false);
 
@@ -197,7 +193,7 @@ describe("authController - login", () => {
       id: 1,
       email: "test@example.com",
       password: "hashedPassword",
-      validated: true,
+      Verified: true,
     });
     mockCompare.mockResolvedValue(true);
     mockSign.mockReturnValue("login-token");
@@ -212,7 +208,7 @@ describe("authController - login", () => {
     });
   });
 
-  test("returns 401 if login throws an error", async () => {
+  test("returns 500, not invalid credentials, if login throws an error", async () => {
     const req = {
       body: {
         email: "test@example.com",
@@ -225,7 +221,8 @@ describe("authController - login", () => {
 
     await login(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: "Invalid credentials" });
+    // A server failure is not a wrong password: say so, so the login page does not blame the user.
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Login failed" });
   });
 });

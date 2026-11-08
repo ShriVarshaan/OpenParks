@@ -1,0 +1,4 @@
+# Keep LF in files that run inside Linux containers or are checksummed by Prisma
+*.sql  text eol=lf
+*.sh   text eol=lf
+*.toml text eol=lf

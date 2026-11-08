@@ -1,10 +1,9 @@
+import "../config/loadEnv.js"
 import prisma from "../config/prisma.js"
 import nodemailer from "nodemailer"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import dotenv from "dotenv"
 import { sendVerification } from "./sendVerification.js";
-dotenv.config()
 
 export const signup = async (req, res, next) =>{
     try{
@@ -22,18 +21,10 @@ export const signup = async (req, res, next) =>{
                 username: req.body.username
             }
         })
-        
-        
-        
-        const token = jwt.sign(
-            {id: newUser.id},
-            process.env.JWT_SECRET,
-            {expiresIn: "7d"}
-        )
 
+        // No token yet: the account is unverified until /verify-otp, which issues one.
         return res.status(201).json({
             message: "created successfully",
-            token: token,
             user: { id: newUser.id, email: newUser.email }
         })
     } catch (err){
@@ -53,7 +44,7 @@ export const login = async(req, res, next) => {
             return res.status(401).json({message: "Invalid credentials"})
         }
 
-        if (!user.validated) {
+        if (!user.Verified) {
             await sendVerification(req.body.email)
             return res.status(403).json({ message: "Please verify your email before logging in" })
         }
@@ -70,7 +61,7 @@ export const login = async(req, res, next) => {
         user: { id: user.id, email: user.email }
     })
     } catch (err){
-        return res.status(401).json({message: "Invalid credentials"})
+        return res.status(500).json({message: "Login failed"})
     }
 }
 

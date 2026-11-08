@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: openparks
+      POSTGRES_PASSWORD: openparks
+      POSTGRES_DB: openparks
+    ports:
+      - "${OPENPARKS_DB_PORT:-5433}:5432"
+    volumes:
+      - openparks-db:/var/lib/postgresql/data
+      - ./docker/initdb/20-openparks-init.sql:/docker-entrypoint-initdb.d/20-openparks-init.sql:ro
+    healthcheck:
+      # Check over TCP: during first-run init Postgres only listens on its Unix socket,
+      # so a socket check would report healthy before the host port is usable.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U openparks -d openparks"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  mail:
+    image: axllent/mailpit:v1.33.1
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      # If you change OPENPARKS_SMTP_PORT, set EMAIL_PORT in backend/.env to match.
+      - "${OPENPARKS_SMTP_PORT:-1025}:1025"
+      - "${OPENPARKS_MAIL_UI_PORT:-8025}:8025"
+
+volumes:
+  openparks-db:

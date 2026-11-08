@@ -91,6 +91,20 @@ describe("reviewController - addReviewPark", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "Park not found" });
   });
 
+  test("saves the review title sent by the review form", async () => {
+    const req = {
+      params: { parkId: "1" },
+      body: { title: "Lovely lake", content: "Nice park", rating: 5 },
+      user: { id: 10 },
+    };
+    mockFindUnique.mockResolvedValue({ id: 1, name: "Park" });
+    mockCreate.mockResolvedValue({ id: 1 });
+
+    await addReviewPark(req, createRes());
+
+    expect(mockCreate.mock.calls[0][0].data.title).toBe("Lovely lake");
+  });
+
   test("creates a review for a valid park", async () => {
     const req = {
       params: { parkId: "1" },

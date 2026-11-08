@@ -20,6 +20,7 @@ export const addReviewPark = async (req, res, next) => {
             data: {
                 user_id: Number(req.user.id),
                 park_id: Number(req.params.parkId),
+                title: req.body.title,
                 content: req.body.content,
                 rating: Number(req.body.rating)
             }})

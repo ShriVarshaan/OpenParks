@@ -1,10 +1,49 @@
 # OpenParks
- 
-A full-stack web application, built using the PERN stack (PostgreSQL, Express, Node.js and React) for discovering parks, submitting safety reports, leaving reviews, and managing trails and amenities.
- 
+
+A full-stack web application, built using the PERN stack (PostgreSQL + PostGIS, Express, React and Node.js) for discovering parks in Birmingham, submitting safety reports, leaving reviews, and browsing trails and amenities.
+
 ---
 
-> Note the website will not work in its current state as there are no env files. I will work on hosting this app soon and also uploading a .sql file so it can be run locally
+## Quick start
+
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running) and [Node.js](https://nodejs.org/) 20 or newer.
+
+```bash
+git clone https://github.com/ShriVarshaan/OpenParks.git
+cd OpenParks
+
+# 1. Start the database (PostGIS) and the email catcher (Mailpit)
+docker compose up -d --wait
+
+# 2. Install everything, create backend/.env, build the database and load the parks
+npm run setup
+
+# 3. Start the app — in two separate terminals
+npm run dev:backend      # API on http://localhost:3000
+npm run dev:frontend     # website on http://localhost:5173
+```
+
+Open **http://localhost:5173**.
+
+- **Demo login:** `demo@openparks.local` / `openparks-demo` (already verified, with a few reviews).
+- **Verification emails:** sign-up codes are caught by Mailpit. Read them at **http://localhost:8025**.
+- `npm run setup` copies `backend/.env.example` to `backend/.env` the first time. The defaults work as-is; edit `.env` only to change ports, secrets or the mail server.
+
+### Stopping and starting again
+
+- `docker compose stop` pauses the database; `docker compose up -d --wait` brings it back with your data.
+- To start from a clean database: `docker compose down -v`, then `docker compose up -d --wait` and `npm --prefix backend run setup`.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `docker compose up` says a port is in use | Another program is using 5433, 1025 or 8025. Set `OPENPARKS_DB_PORT`, `OPENPARKS_SMTP_PORT` or `OPENPARKS_MAIL_UI_PORT` before `docker compose up`, and update `DATABASE_URL` / `EMAIL_PORT` in `backend/.env` to match. |
+| The login page says "Cannot reach the server" | The backend isn't running. Start it with `npm run dev:backend`. |
+| `npm run setup` fails with `P1001: Can't reach database server` | Docker isn't running, or the database is still starting. Run `docker compose up -d --wait` and try again. |
+| The backend runs somewhere other than `localhost:3000` | Copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL`. |
+
+---
 
 ## Using the website
 
@@ -24,7 +63,7 @@ Login/signup to the app
 
 ![alt text](image-1.png)
 
-> Check your spam folder, if an email with your otp is not in your inbox
+> Running locally, the verification email never leaves your machine: open the Mailpit inbox at http://localhost:8025 to read the code.
 
 ![alt text](image-2.png)
 
@@ -53,114 +92,92 @@ In the accounts page you'll have access to all the reports you've filed and the 
 ![alt text](image-6.png)
 
 ---
- 
-## 🚀 Getting Started
- 
-### Prerequisites
- 
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
-- [npm](https://www.npmjs.com/)
- 
----
- 
-### Backend Setup
 
-> Note: Use a separate terminal to run the frontend and the backend
- 
-```bash
-# Navigate to the backend directory
-cd backend
- 
-# Install dependencies
-npm install
+## Frontend pages
 
-#cd into the src folder
-cd src
- 
-# Start the server
-node server.js
-```
- 
-The backend will start on **http://localhost:3000**
- 
----
- 
-### Frontend Setup
- 
-```bash
-# Navigate to the frontend directory
-cd frontend
- 
-# Install dependencies
-npm install
- 
-# Start the development server
-npm run dev
-```
- 
-The frontend will be available on **http://localhost:5173** (or **http://localhost:5174**)
- 
----
- 
-## 🗺️ Frontend Pages
- 
 | Page | Path | Description |
 |---|---|---|
-| Home | `/` | Browse and discover parks |
+| Home | `/` | Map of parks, trails, amenities and the report heatmap |
 | Report | `/report` | Submit a safety report for a park |
-| Login | `/login` | User login/signup |
+| Login | `/login` | Log in, sign up and verify your email |
 | Review | `/review` | Leave a review for a park |
-| Account | `/account` | View and manage your account |
- 
----
- 
-## API Endpoints
- 
+| Account | `/account` | Your reviews and reports; delete your account |
+
+## API endpoints
+
 | Resource | Base Path | Description |
 |---|---|---|
-| Parks | `/api/parks` | get all park listings |
-| Auth | `/api/auth` | User authentication login/signup and OTP's |
-| Amenities | `/api/amenities` | Manage park amenities |
+| Parks | `/api/parks` | All parks as a GeoJSON FeatureCollection |
+| Auth | `/api/auth` | Login, sign-up and email verification codes |
+| Amenities | `/api/amenities` | Park amenities (benches, toilets, cafés, …) |
 | Safety Reports | `/api/safetyreport` | Submit and retrieve safety reports |
 | Reviews | `/api/reviews` | Post and fetch park reviews |
-| Trails | `/api/trails` | Manage trail information for parks |
-| User / Account | `/api/user` | Account management and user profile |
- 
+| Trails | `/api/trails` | Footpaths, cycleways and other trails in parks |
+| User / Account | `/api/user` | Account details and deletion |
+
 ---
- 
-## Tech Stack
- 
+
+## Tech stack
+
 | Layer | Technology |
 |---|---|
-| Frontend | React |
-| Backend | Node.js, Express |
+| Frontend | React, Vite, MapLibre GL JS |
+| Backend | Node.js, Express, Passport (JWT) |
 | Database ORM | Prisma |
-| Database | PostgreSQL with PostGIS |
-| Database hosting | Supabase |
-| Auth | Passport.js |
-| API's | Maplibre gl js|
-| Testing | Jest |
-
-All of the data related to park boundaries, trails and amenities were sourced from the overpass API and stored in the database
+| Database | PostgreSQL with PostGIS (Docker for local development) |
+| Email | Nodemailer (Mailpit locally) |
+| Testing | Jest (backend), Vitest + Testing Library (frontend) |
 
 ---
- 
-## CORS
- 
-The API is configured to accept requests from:
-- `http://localhost:5173`
-- `http://localhost:5174`
+
+## Park data
+
+Parks, trails and amenities come from OpenStreetMap through the Overpass API. The data is saved as GeoJSON snapshots in `backend/prisma/data/`, so setting up never needs the internet beyond `npm install`. `npm run setup` loads the snapshots into the database (re-running `npm --prefix backend run db:seed` is safe).
+
+Park, trail and amenity data © OpenStreetMap contributors, available under the Open Database License (ODbL).
+
+### Adding more parks
+
+1. Add an area to `backend/scripts/parks.config.json`. Each area is a name and a bounding box `[south, west, north, east]`. To leave out a park, add its OSM id (for example `"way/123"`) to `exclude`.
+2. Download the new snapshots: `npm --prefix backend run parks:fetch`.
+3. Load them: `npm --prefix backend run db:seed`.
+4. Commit the changed files in `backend/prisma/data/`.
+
+See `backend/prisma/data/README.md` for details.
 
 ---
 
 ## Testing
 
-### Backend
+```bash
+npm test                                   # backend unit + integration, and frontend tests
 
-The test plan for the backend of the app is in the `backend/tests` directory. The test plan also contains instructions on how to run the tests.
+cd backend
+npm run test:unit
+npm run test:integration
+npm run test:db                            # real PostGIS tests; needs `docker compose up -d --wait`
 
-### Frontend
+cd frontend
+npx vitest run
+```
 
-The test plan for the frontend of the app is in `frontend/`. The test plan also contains instructions on how to run the tests.
+`npm run test:db` only ever uses the separate `openparks_test` database, never your development data. Test plans: `backend/tests/testplan.md` and `frontend/test-plan.md`.
 
 ---
+
+## Configuration
+
+The backend reads `backend/.env` (see `backend/.env.example`):
+
+| Variable | Purpose | Local default |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | the Docker database on port 5433 |
+| `DB_SSL` | `true` for hosted databases that require SSL | `false` |
+| `JWT_SECRET` | Signs login tokens. Change it for any real deployment | `change-me-in-production` |
+| `EMAIL_HOST`, `EMAIL_PORT` | SMTP server for verification emails | Mailpit, `localhost:1025` |
+| `EMAIL_USER`, `EMAIL_PASS` | SMTP login (leave empty for Mailpit) | empty |
+| `EMAIL_FROM` | Sender address | `OpenParks <no-reply@openparks.local>` |
+| `CORS_ORIGINS` | Comma-separated allowed frontend origins | `http://localhost:5173,http://localhost:5174` |
+| `PORT` | API port | `3000` |
+
+The frontend reads `VITE_API_URL` from `frontend/.env` (default `http://localhost:3000`).

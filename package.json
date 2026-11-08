@@ -1,6 +1,11 @@
 {
-  "dependencies": {
-    "dotenv-cli": "^11.0.0",
-    "nodemailer-otp": "^1.0.8"
+  "name": "openparks",
+  "private": true,
+  "description": "OpenParks: browse parks, file safety reports and leave reviews. Convenience scripts for the backend/ and frontend/ projects.",
+  "scripts": {
+    "setup": "cd backend && npm install && npm run setup && cd ../frontend && npm install",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "test": "npm --prefix backend run test:unit && npm --prefix backend run test:integration && cd frontend && npx vitest run"
   }
 }

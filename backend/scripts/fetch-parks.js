@@ -27,6 +27,9 @@ function toGeoJsonText(features) {
 }
 
 export async function runFetch({ config, outDir = DEFAULT_OUT_DIR, fetchImpl = fetch, overpassOptions = {}, log = () => {} }) {
+  if (!config.areas?.length) {
+    throw new Error("parks.config.json has no areas to fetch");
+  }
   const query = (q) => fetchOverpass(q, fetchImpl, overpassOptions);
   const parks = [];
   const trails = [];
@@ -36,7 +39,12 @@ export async function runFetch({ config, outDir = DEFAULT_OUT_DIR, fetchImpl = f
   for (const area of config.areas) {
     const queries = buildQueries(area.bbox);
     log(`Fetching ${area.name}: parks…`);
-    parks.push(...toParkFeatures(osmtogeojson(await query(queries.parks)), config.exclude));
+    const areaParks = toParkFeatures(osmtogeojson(await query(queries.parks)), config.exclude);
+    // Zero parks almost always means a mistyped bbox or a bad response, not an empty area.
+    if (areaParks.length === 0) {
+      throw new Error(`Area "${area.name}" returned no parks — check its bbox ([south, west, north, east])`);
+    }
+    parks.push(...areaParks);
     log(`Fetching ${area.name}: trails…`);
     trails.push(...toTrailFeatures(osmtogeojson(await query(queries.trails))));
     log(`Fetching ${area.name}: amenities…`);

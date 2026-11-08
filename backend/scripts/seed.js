@@ -46,15 +46,27 @@ async function removeStaleParks(tx) {
     ORDER BY p.name`;
 }
 
-async function loadParks(tx, parks) {
+async function loadParks(tx, parks, warn) {
+  // Repair invalid rings and keep only the polygon parts. A shape with no area left
+  // (e.g. all points on one line) would become an invisible, unclickable park, so skip it.
+  const repaired = Prisma.sql`
+    SELECT
+      f->'properties'->>'name' AS name,
+      f->'properties'->>'osm_type' AS osm_type,
+      (f->'properties'->>'osm_id')::bigint AS osm_id,
+      ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(f->>'geometry'), 4326)), 3)) AS geom
+    FROM jsonb_array_elements(${JSON.stringify(parks)}::jsonb->'features') AS f`;
+
+  const skipped = await tx.$queryRaw`SELECT name FROM (${repaired}) r WHERE ST_IsEmpty(r.geom) ORDER BY name`;
+  for (const { name } of skipped) {
+    warn(`Skipped "${name}": its outline has no area after repair.`);
+  }
+
   await tx.$executeRaw`
     INSERT INTO "Park" (name, osm_type, osm_id, location)
-    SELECT
-      f->'properties'->>'name',
-      f->'properties'->>'osm_type',
-      (f->'properties'->>'osm_id')::bigint,
-      ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(f->>'geometry'), 4326)), 3))::geography
-    FROM jsonb_array_elements(${JSON.stringify(parks)}::jsonb->'features') AS f
+    SELECT r.name, r.osm_type, r.osm_id, r.geom::geography
+    FROM (${repaired}) r
+    WHERE NOT ST_IsEmpty(r.geom)
     ON CONFLICT (osm_type, osm_id) DO UPDATE SET name = EXCLUDED.name, location = EXCLUDED.location`;
 }
 
@@ -141,7 +153,7 @@ export async function seed({ prisma, data, warn = () => {} }) {
       for (const { name } of kept) {
         warn(`Kept "${name}": no longer in the snapshot, but it has reviews or reports. It gets no trails or amenities.`);
       }
-      await loadParks(tx, data.parks);
+      await loadParks(tx, data.parks, warn);
       await loadTrails(tx, data.trails);
       await loadAmenities(tx, data.amenities);
       demoUser = await loadDemoData(tx);

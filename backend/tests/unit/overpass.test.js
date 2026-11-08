@@ -98,6 +98,25 @@ describe("fetchOverpass", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
+  test("retries a network error and returns the later success", async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(ok({ elements: [] }));
+
+    await expect(fetchOverpass("[out:json];", fetchImpl, { sleep: noSleep })).resolves.toEqual({ elements: [] });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  test("gives up on a persistent network error with its message", async () => {
+    const fetchImpl = jest.fn().mockRejectedValue(new TypeError("fetch failed"));
+
+    await expect(fetchOverpass("[out:json];", fetchImpl, { retries: 1, sleep: noSleep })).rejects.toThrow(
+      "fetch failed"
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   test("does not retry a client error such as 400", async () => {
     const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 400 });
 
@@ -149,6 +168,28 @@ describe("runFetch", () => {
       runFetch({ config, outDir, fetchImpl, overpassOptions: { sleep: async () => {} } })
     ).rejects.toThrow("Overpass runtime error");
     expect(fs.readFileSync(path.join(outDir, "trails.geojson"), "utf8")).toBe("OLD");
+  });
+
+  test("refuses to run with no areas configured and writes nothing", async () => {
+    const fetchImpl = jest.fn();
+
+    await expect(runFetch({ config: { areas: [], exclude: [] }, outDir, fetchImpl })).rejects.toThrow(
+      "no areas"
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(fs.readdirSync(outDir)).toEqual([]);
+  });
+
+  test("refuses to write snapshots when an area returns no parks", async () => {
+    fs.writeFileSync(path.join(outDir, "parks.geojson"), "OLD");
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(ok({ elements: [] }))
+      .mockResolvedValueOnce(ok(TRAILS_RESPONSE))
+      .mockResolvedValueOnce(ok(AMENITIES_RESPONSE));
+
+    await expect(runFetch({ config, outDir, fetchImpl })).rejects.toThrow('Area "Test" returned no parks');
+    expect(fs.readFileSync(path.join(outDir, "parks.geojson"), "utf8")).toBe("OLD");
   });
 
   test("de-duplicates parks that appear in overlapping areas", async () => {

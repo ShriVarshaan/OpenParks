@@ -28,11 +28,19 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function fetchOverpass(query, fetchImpl = fetch, { retries = 4, baseDelayMs = 5000, sleep = wait } = {}) {
   for (let attempt = 0; ; attempt++) {
-    const response = await fetchImpl(OVERPASS_URL, {
-      method: "POST",
-      headers: { "User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ data: query }).toString(),
-    });
+    let response;
+    try {
+      response = await fetchImpl(OVERPASS_URL, {
+        method: "POST",
+        headers: { "User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ data: query }).toString(),
+      });
+    } catch (err) {
+      // Network failure (connection reset, DNS, …): transient, retry like a 5xx.
+      if (attempt >= retries) throw err;
+      await sleep(baseDelayMs * 2 ** attempt);
+      continue;
+    }
     if (response.ok) {
       const data = await response.json();
       // A busy server can answer 200 with truncated data and a "runtime error" remark

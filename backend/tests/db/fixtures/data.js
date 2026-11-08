@@ -9,7 +9,9 @@ const square = (west, east, south, north) => ({
 export const PARK_A = { osm_type: "way", osm_id: "1001", name: "Cannon Hill Park" };
 export const PARK_B = { osm_type: "way", osm_id: "1002", name: "Park B" };
 export const BOWTIE = { osm_type: "relation", osm_id: "1003", name: "Bowtie Park" };
+export const COLLAPSED = { osm_type: "way", osm_id: "1004", name: "Collapsed Park" };
 export const CROSSING_TRAIL_ID = "2001";
+export const BENCH_ID = "3001";
 
 const fc = (features) => ({ type: "FeatureCollection", features });
 const feature = (geometry, properties) => ({ type: "Feature", geometry, properties });
@@ -27,6 +29,11 @@ export function fixtureData() {
         },
         { ...BOWTIE }
       ),
+      // All points on one line: ST_MakeValid leaves no polygon at all → must be skipped, not stored empty
+      feature(
+        { type: "Polygon", coordinates: [[[-1.85, 52.44], [-1.84, 52.44], [-1.83, 52.44], [-1.85, 52.44]]] },
+        { ...COLLAPSED }
+      ),
     ]),
     trails: fc([
       // 0.005° inside Park A, 0.015° inside Park B → belongs to Park B
@@ -41,7 +48,7 @@ export function fixtureData() {
       ),
     ]),
     amenities: fc([
-      feature({ type: "Point", coordinates: [-1.905, 52.445] }, { osm_type: "node", osm_id: "3001", name: "bench" }),
+      feature({ type: "Point", coordinates: [-1.905, 52.445] }, { osm_type: "node", osm_id: BENCH_ID, name: "bench" }),
       // Outside every park → skipped
       feature({ type: "Point", coordinates: [-1.95, 52.43] }, { osm_type: "node", osm_id: "3002", name: "cafe" }),
     ]),

@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import bcrypt from "bcrypt";
-import { fixtureData, PARK_A, PARK_B, BOWTIE, CROSSING_TRAIL_ID } from "./fixtures/data.js";
+import { fixtureData, PARK_A, PARK_B, BOWTIE, COLLAPSED, CROSSING_TRAIL_ID, BENCH_ID } from "./fixtures/data.js";
 import { emptyTestDatabase } from "./resetTestDb.js";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -74,6 +74,43 @@ test("assigns a trail crossing two parks to exactly one park — the one it over
     `SELECT p.osm_id::text AS park_osm_id FROM trails t JOIN "Park" p ON p.id = t.park_id WHERE t.osm_id = ${CROSSING_TRAIL_ID}`
   );
   expect(rows).toEqual([{ park_osm_id: PARK_B.osm_id }]);
+});
+
+test("skips a park whose geometry collapses to nothing, with a warning", async () => {
+  const warn = jest.fn();
+
+  await seed({ prisma, data: fixtureData(), warn });
+
+  const { count } = await one(`SELECT count(*)::int AS count FROM "Park" WHERE osm_id = ${COLLAPSED.osm_id}`);
+  expect(count).toBe(0);
+  const { empty } = await one(`SELECT count(*)::int AS empty FROM "Park" WHERE ST_IsEmpty(location::geometry)`);
+  expect(empty).toBe(0);
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining(COLLAPSED.name));
+});
+
+test("assigns an amenity to the park that contains it", async () => {
+  await seed({ prisma, data: fixtureData() });
+
+  const row = await one(
+    `SELECT p.osm_id::text AS park_osm_id FROM "ParkAmenity" a JOIN "Park" p ON p.id = a.park_id WHERE a.osm_id = ${BENCH_ID}`
+  );
+  expect(row.park_osm_id).toBe(PARK_A.osm_id);
+});
+
+test("moves a trail when a new snapshot changes which park it overlaps most", async () => {
+  await seed({ prisma, data: fixtureData() }); // crossing trail starts in Park B
+
+  const shrunk = fixtureData();
+  // Park B now spans only lng -1.900..-1.899, so the trail overlaps Park A (0.005°) more than B (0.001°)
+  shrunk.parks.features[1].geometry.coordinates = [
+    [[-1.9, 52.44], [-1.899, 52.44], [-1.899, 52.45], [-1.9, 52.45], [-1.9, 52.44]],
+  ];
+  await seed({ prisma, data: shrunk });
+
+  const rows = await prisma.$queryRawUnsafe(
+    `SELECT p.osm_id::text AS park_osm_id FROM trails t JOIN "Park" p ON p.id = t.park_id WHERE t.osm_id = ${CROSSING_TRAIL_ID}`
+  );
+  expect(rows).toEqual([{ park_osm_id: PARK_A.osm_id }]);
 });
 
 const withoutPark = (data, park) => {

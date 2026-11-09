@@ -79,6 +79,11 @@ const HIGH_CONTRAST_MAP_PAINT = {
   contrast: 0.75,
 }
 
+// Pan limits until the parks load (and if they fail to).
+const DEFAULT_BOUNDS = [[-1.96, 52.42], [-1.86, 52.48]]
+// Street level: close enough to see the parks near the user.
+const USER_ZOOM = 15
+
 export default function MapRenderer() {
   const navigate = useNavigate()
   const mapContainer = useRef(null)
@@ -87,6 +92,23 @@ export default function MapRenderer() {
   const [activeCategory, setActiveCategory] = useState(null)
   const [isLoggedIn, setLoggedIn] = useState(false)
   const userMarkerRef = useRef(null)
+
+  // The user's first location fix and the final pan limits arrive in either order;
+  // whichever comes second moves the map to the user, once.
+  const panBoundsRef = useRef(null) // set when the parks request settles
+  const userFixRef = useRef(null)
+  const centredOnUserRef = useRef(false)
+  const centreOnUserWhenReady = () => {
+    const map = mapRef.current
+    const bounds = panBoundsRef.current
+    const fix = userFixRef.current
+    if (!map || !bounds || !fix || centredOnUserRef.current) return
+    centredOnUserRef.current = true
+    // Outside the mapped area the pan limits would pin the view to an edge: stay on the parks.
+    if (new maplibregl.LngLatBounds(bounds).contains({ lng: fix[0], lat: fix[1] })) {
+      map.flyTo({ center: fix, zoom: USER_ZOOM })
+    }
+  }
 
 
   const reportsMarkersRef = useRef([])
@@ -269,7 +291,7 @@ export default function MapRenderer() {
       minZoom: 13,
       maxZoom: 19,
       // Fallback until the parks load; then the limits grow to cover every park (see below).
-      maxBounds: [[-1.96, 52.42], [-1.86, 52.48]],
+      maxBounds: DEFAULT_BOUNDS,
     })
 
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
@@ -294,6 +316,8 @@ export default function MapRenderer() {
               map.fitBounds(bounds, { animate: false })
             }
           }
+          panBoundsRef.current = bounds ?? DEFAULT_BOUNDS
+          centreOnUserWhenReady()
 
           map.addSource('park-boundary', {
             type: 'geojson',
@@ -312,7 +336,11 @@ export default function MapRenderer() {
             paint: { 'line-color': '#2d5a27', 'line-width': 2.5 },
           })
         })
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err)
+        panBoundsRef.current = DEFAULT_BOUNDS
+        centreOnUserWhenReady()
+      })
 
       API.get('/api/trails').then(r => {
         map.addSource('trails', { type: 'geojson', data: r.data })
@@ -552,12 +580,17 @@ export default function MapRenderer() {
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !navigator.geolocation) return
- 
-    const watchId = navigator.geolocation.watchPosition(
+    const geolocation = navigator.geolocation
+    if (!map || !geolocation) return
+
+    const watchId = geolocation.watchPosition(
       ({ coords }) => {
         const { longitude, latitude } = coords
- 
+        if (!userFixRef.current) {
+          userFixRef.current = [longitude, latitude]
+          centreOnUserWhenReady()
+        }
+
         if (!userMarkerRef.current) {
           const el = document.createElement('div')
           el.style.cssText = `
@@ -576,7 +609,7 @@ export default function MapRenderer() {
     )
  
     return () => {
-      navigator.geolocation.clearWatch(watchId)
+      geolocation.clearWatch(watchId)
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
     }

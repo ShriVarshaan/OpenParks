@@ -185,6 +185,18 @@ Each component is tested in complete isolation. API calls, navigation, toast not
 | UT-PM-13 | Review panel is present in DOM | Render MapRenderer | 'Reviews' label present in DOM | Panel in DOM | PASS |
 | UT-PM-14 | Review panel close button is present | Render MapRenderer | Close button (✕) visible | Close button present | PASS |
 
+### 4.5.6 Centring on the User
+
+Geolocation is faked: `navigator.geolocation.watchPosition` captures the position callback and the test fires it. Parks cover lng −2.0…−1.75, lat 52.4…52.6.
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-PM-15 | Flies to the user when their location arrives after the parks load | Load parks, then report (−1.89, 52.48) | `map.flyTo({ center: [-1.89, 52.48], zoom: 15 })` | Called as expected | PASS |
+| UT-PM-16 | Flies to the user once the parks load when their location arrives first | Report location, then fire map `load` | No `flyTo` before load; `flyTo` to the user after the parks load | Called after load only | PASS |
+| UT-PM-17 | Stays on the parks when the user is outside the mapped area | Load parks, report London (−0.12, 51.5) | `flyTo` not called | Not called | PASS |
+| UT-PM-18 | Only recentres on the first location fix | Load parks, report two positions | `flyTo` called once | Called once | PASS |
+| UT-PM-19 | Still centres on the user inside the default area when the parks fail to load | `/api/parks` rejects; report (−1.9, 52.45) | `flyTo` to the user | Called as expected | PASS |
+
 ---
 
 ## 4.6 AccessibilityContext

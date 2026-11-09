@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BrowserRouter } from 'react-router'
 import MapRenderer from '../src/pages/ParkMap'
 import API from '../src/api/axiosInstance'
@@ -40,6 +40,7 @@ vi.mock('maplibre-gl', () => ({
       setMinZoom: vi.fn(),
       getCenter: vi.fn().mockReturnValue({ lng: -1.905, lat: 52.4484 }),
       fitBounds: vi.fn(),
+      flyTo: vi.fn(),
     })),
     LngLatBounds: vi.fn().mockImplementation(([[w, s], [e, n]]) => ({
       contains: ({ lng, lat }) => lng >= w && lng <= e && lat >= s && lat <= n,
@@ -174,6 +175,87 @@ describe('MapRenderer (ParkMap)', () => {
 
     await waitFor(() => expect(map.addSource).toHaveBeenCalledWith('park-boundary', expect.anything()))
     expect(map.setMaxBounds).not.toHaveBeenCalled()
+  })
+
+  describe('centring on the user', () => {
+    // jsdom has no geolocation: install a fake whose position callback the test fires.
+    let reportPosition
+    beforeEach(() => {
+      reportPosition = undefined
+      Object.defineProperty(navigator, 'geolocation', {
+        configurable: true,
+        value: {
+          watchPosition: vi.fn((onPosition) => {
+            reportPosition = (lng, lat) => onPosition({ coords: { longitude: lng, latitude: lat } })
+            return 1
+          }),
+          clearWatch: vi.fn(),
+        },
+      })
+    })
+    afterEach(() => {
+      delete navigator.geolocation
+    })
+
+    const birminghamParks = parksAround(-2.0, -1.75, 52.4, 52.6)
+
+    it('flies to the user when their location arrives after the parks load', async () => {
+      const map = await loadParksOnMap(birminghamParks)
+
+      reportPosition(-1.89, 52.48)
+
+      expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.89, 52.48], zoom: 15 })
+    })
+
+    it('flies to the user once the parks load when their location arrives first', async () => {
+      mockApiAfterLoad(birminghamParks)
+      render(
+        <BrowserRouter>
+          <MapRenderer />
+        </BrowserRouter>
+      )
+      const map = maplibregl.Map.mock.results[0].value
+      reportPosition(-1.89, 52.48)
+      expect(map.flyTo).not.toHaveBeenCalled()
+
+      map.on.mock.calls.find(([event]) => event === 'load')[1]()
+
+      await waitFor(() => expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.89, 52.48], zoom: 15 }))
+    })
+
+    it('stays on the parks when the user is outside the mapped area', async () => {
+      const map = await loadParksOnMap(birminghamParks)
+
+      reportPosition(-0.12, 51.5) // London
+
+      expect(map.flyTo).not.toHaveBeenCalled()
+    })
+
+    it('only recentres on the first location fix, so the user can pan away', async () => {
+      const map = await loadParksOnMap(birminghamParks)
+
+      reportPosition(-1.89, 52.48)
+      reportPosition(-1.88, 52.47)
+
+      expect(map.flyTo).toHaveBeenCalledTimes(1)
+    })
+
+    it('still centres on the user inside the default area when the parks fail to load', async () => {
+      API.get.mockImplementation((url) =>
+        url === '/api/parks' ? Promise.reject(new Error('down')) : Promise.resolve({ data: url === '/api/trails' ? mockGeojson : [] })
+      )
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      render(
+        <BrowserRouter>
+          <MapRenderer />
+        </BrowserRouter>
+      )
+      const map = maplibregl.Map.mock.results[0].value
+      map.on.mock.calls.find(([event]) => event === 'load')[1]()
+      reportPosition(-1.9, 52.45)
+
+      await waitFor(() => expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.9, 52.45], zoom: 15 }))
+    })
   })
 
   it('names the whole city in the header, not one park', () => {

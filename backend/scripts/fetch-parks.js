@@ -37,7 +37,7 @@ export async function runFetch({ config, outDir = DEFAULT_OUT_DIR, fetchImpl = f
 
   // Sequential on purpose: the public Overpass server rate-limits parallel requests.
   for (const area of config.areas) {
-    const queries = buildQueries(area.bbox);
+    const queries = buildQueries(area.bbox, area.boundary);
     log(`Fetching ${area.name}: parks…`);
     const areaParks = toParkFeatures(osmtogeojson(await query(queries.parks)), config.exclude);
     // Zero parks almost always means a mistyped bbox or a bad response, not an empty area.

@@ -1,6 +1,10 @@
 {
   "areas": [
-    { "name": "Birmingham south & centre", "bbox": [52.42, -1.96, 52.48, -1.86] }
+    {
+      "name": "Birmingham",
+      "bbox": [52.381, -2.034, 52.609, -1.728],
+      "boundary": "relation/162378"
+    }
   ],
   "exclude": []
 }

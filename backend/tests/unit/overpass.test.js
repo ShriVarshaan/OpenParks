@@ -59,6 +59,26 @@ describe("buildQueries", () => {
     expect(parks).toContain("(52.42,-1.96,52.48,-1.86)");
     expect(parks).toContain("out geom");
   });
+
+  test("without a boundary, no query references a boundary area", () => {
+    for (const q of Object.values(buildQueries(BBOX))) {
+      expect(q).not.toContain("area.boundary");
+    }
+  });
+
+  test("with a boundary relation, every query clips parks to that boundary", () => {
+    const queries = buildQueries(BBOX, "relation/162378");
+    for (const q of Object.values(queries)) {
+      expect(q).toContain("rel(162378);map_to_area->.boundary;");
+      expect(q).toContain('way["leisure"="park"]["name"](52.42,-1.96,52.48,-1.86)(area.boundary)');
+      expect(q).toContain('relation["leisure"="park"]["name"](52.42,-1.96,52.48,-1.86)(area.boundary)');
+    }
+  });
+
+  test("rejects a boundary that is not a relation/<id> reference", () => {
+    expect(() => buildQueries(BBOX, "way/1")).toThrow(/relation\/<id>/);
+    expect(() => buildQueries(BBOX, "Birmingham")).toThrow(/relation\/<id>/);
+  });
 });
 
 describe("fetchOverpass", () => {
@@ -205,5 +225,20 @@ describe("runFetch", () => {
     const counts = await runFetch({ config: twoAreas, outDir, fetchImpl });
 
     expect(counts).toEqual({ parks: 1, trails: 1, amenities: 1 });
+  });
+
+  test("passes an area's boundary into its Overpass queries", async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(ok(PARKS_RESPONSE))
+      .mockResolvedValueOnce(ok(TRAILS_RESPONSE))
+      .mockResolvedValueOnce(ok(AMENITIES_RESPONSE));
+    const bounded = { areas: [{ name: "City", bbox: BBOX, boundary: "relation/162378" }], exclude: [] };
+
+    await runFetch({ config: bounded, outDir, fetchImpl });
+
+    for (const [, init] of fetchImpl.mock.calls) {
+      expect(new URLSearchParams(init.body).get("data")).toContain("rel(162378);map_to_area->.boundary;");
+    }
   });
 });

@@ -8,15 +8,27 @@ const OSM_AMENITY_VALUES = AMENITY_TYPES.filter((t) => t !== "playground").map((
   t === "toilet" ? "toilets" : t
 );
 
-// bbox is [south, west, north, east] — Overpass order
-export function buildQueries(bbox) {
-  const b = `(${bbox.join(",")})`;
-  const header = "[out:json][timeout:120];";
+// bbox is [south, west, north, east] — Overpass order.
+// boundary (optional) is "relation/<id>" of an administrative area, such as a city.
+// Parks are then limited to that area, so a bbox drawn around an irregular city
+// doesn't pull in parks from its neighbours.
+export function buildQueries(bbox, boundary) {
+  let b = `(${bbox.join(",")})`;
+  let header = "[out:json][timeout:180];";
+  if (boundary !== undefined) {
+    const match = /^relation\/(\d+)$/.exec(boundary);
+    if (!match) {
+      throw new Error(`boundary must be "relation/<id>", got "${boundary}"`);
+    }
+    header += `rel(${match[1]});map_to_area->.boundary;`;
+    b += "(area.boundary)";
+  }
+  const parkSet = `(way["leisure"="park"]["name"]${b};relation["leisure"="park"]["name"]${b};)`;
   // Trails and amenities are limited to the named parks themselves, not the whole bbox.
-  const parkAreas = `(way["leisure"="park"]["name"]${b};relation["leisure"="park"]["name"]${b};)->.parks;.parks map_to_area->.parkArea;`;
+  const parkAreas = `${parkSet}->.parks;.parks map_to_area->.parkArea;`;
 
   return {
-    parks: `${header}(way["leisure"="park"]["name"]${b};relation["leisure"="park"]["name"]${b};);out geom;`,
+    parks: `${header}${parkSet};out geom;`,
     trails: `${header}${parkAreas}way(area.parkArea)["highway"~"^(${TRAIL_HIGHWAYS.join("|")})$"];out geom;`,
     amenities: `${header}${parkAreas}(nwr(area.parkArea)["amenity"~"^(${OSM_AMENITY_VALUES.join("|")})$"];nwr(area.parkArea)["leisure"="playground"];);out center;`,
   };

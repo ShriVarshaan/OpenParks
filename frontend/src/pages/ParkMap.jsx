@@ -6,6 +6,8 @@ import API from "../api/axiosInstance.js"
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon"
 import { point } from "@turf/helpers"
 import { computeBounds } from '../utils/geo'
+import { RecenterControl } from '../components/RecenterControl'
+import toast from 'react-hot-toast'
 
 const TRAIL_TYPES = [
   { label: 'Footpath',       color: '#5a9e4f' },
@@ -96,18 +98,32 @@ export default function MapRenderer() {
   // The user's first location fix and the final pan limits arrive in either order;
   // whichever comes second moves the map to the user, once.
   const panBoundsRef = useRef(null) // set when the parks request settles
-  const userFixRef = useRef(null)
+  const userFixRef = useRef(null) // first fix: drives the one-off centring
+  const latestFixRef = useRef(null) // latest fix: where the recentre button goes
   const centredOnUserRef = useRef(false)
+  const recenterControlRef = useRef(null)
+  // Outside the mapped area the pan limits would pin the view to an edge, so we never fly there.
+  const isInMappedArea = ([lng, lat]) =>
+    new maplibregl.LngLatBounds(panBoundsRef.current ?? DEFAULT_BOUNDS).contains({ lng, lat })
   const centreOnUserWhenReady = () => {
     const map = mapRef.current
-    const bounds = panBoundsRef.current
     const fix = userFixRef.current
-    if (!map || !bounds || !fix || centredOnUserRef.current) return
+    if (!map || !panBoundsRef.current || !fix || centredOnUserRef.current) return
     centredOnUserRef.current = true
-    // Outside the mapped area the pan limits would pin the view to an edge: stay on the parks.
-    if (new maplibregl.LngLatBounds(bounds).contains({ lng: fix[0], lat: fix[1] })) {
+    if (isInMappedArea(fix)) {
       map.flyTo({ center: fix, zoom: USER_ZOOM })
     }
+  }
+  const recentreOnUser = () => {
+    const map = mapRef.current
+    const fix = latestFixRef.current
+    if (!map || !fix) return
+    if (!isInMappedArea(fix)) {
+      toast("You're outside the area OpenParks covers")
+      return
+    }
+    // Zoom in to street level, but don't zoom out if the user is already closer.
+    map.flyTo({ center: fix, zoom: Math.max(map.getZoom(), USER_ZOOM) })
   }
 
 
@@ -295,6 +311,9 @@ export default function MapRenderer() {
     })
 
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
+    // Bottom controls stack upwards: this lands just above the zoom buttons.
+    recenterControlRef.current = new RecenterControl({ onClick: recentreOnUser })
+    map.addControl(recenterControlRef.current, 'bottom-right')
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right')
 
 
@@ -586,6 +605,8 @@ export default function MapRenderer() {
     const watchId = geolocation.watchPosition(
       ({ coords }) => {
         const { longitude, latitude } = coords
+        latestFixRef.current = [longitude, latitude]
+        recenterControlRef.current?.setAvailable(true)
         if (!userFixRef.current) {
           userFixRef.current = [longitude, latitude]
           centreOnUserWhenReady()

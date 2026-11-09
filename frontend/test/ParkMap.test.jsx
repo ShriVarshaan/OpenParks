@@ -4,7 +4,9 @@ import { BrowserRouter } from 'react-router'
 import MapRenderer from '../src/pages/ParkMap'
 import API from '../src/api/axiosInstance'
 import maplibregl from 'maplibre-gl'
- 
+import toast from 'react-hot-toast'
+import { RecenterControl } from '../src/components/RecenterControl'
+
 vi.mock('../src/api/axiosInstance', () => ({
   default: {
     get: vi.fn(),
@@ -13,10 +15,10 @@ vi.mock('../src/api/axiosInstance', () => ({
 }))
  
 vi.mock('react-hot-toast', () => ({
-  default: {
+  default: Object.assign(vi.fn(), {
     success: vi.fn(),
     error: vi.fn(),
-  },
+  }),
 }))
  
 vi.mock('maplibre-gl', () => ({
@@ -255,6 +257,63 @@ describe('MapRenderer (ParkMap)', () => {
       reportPosition(-1.9, 52.45)
 
       await waitFor(() => expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.9, 52.45], zoom: 15 }))
+    })
+
+    // The control is a real MapLibre control; mount its element the way MapLibre would.
+    // React's cleanup doesn't know about it, so remove it after each test.
+    let mountedControl
+    afterEach(() => {
+      mountedControl?.onRemove()
+      mountedControl = undefined
+    })
+    const mountRecenterButton = (map) => {
+      ;[mountedControl] = map.addControl.mock.calls.find(([c]) => c instanceof RecenterControl)
+      document.body.appendChild(mountedControl.onAdd(map))
+      return screen.getByRole('button', { name: 'Show my location', hidden: true })
+    }
+
+    it('hides the recentre button until the user\'s location is known', async () => {
+      const map = await loadParksOnMap(birminghamParks)
+      const button = mountRecenterButton(map)
+      expect(button).not.toBeVisible()
+
+      reportPosition(-1.89, 52.48)
+
+      expect(button).toBeVisible()
+    })
+
+    it('recentres on the user\'s latest location when the button is clicked', async () => {
+      const map = await loadParksOnMap(birminghamParks)
+      const button = mountRecenterButton(map)
+      reportPosition(-1.89, 52.48)
+      reportPosition(-1.88, 52.47) // the user walked on
+      map.flyTo.mockClear()
+
+      fireEvent.click(button)
+
+      expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.88, 52.47], zoom: 15 })
+    })
+
+    it('keeps a closer zoom when recentring', async () => {
+      const map = await loadParksOnMap(birminghamParks)
+      const button = mountRecenterButton(map)
+      reportPosition(-1.89, 52.48)
+      map.getZoom.mockReturnValue(17.5)
+
+      fireEvent.click(button)
+
+      expect(map.flyTo).toHaveBeenLastCalledWith({ center: [-1.89, 52.48], zoom: 17.5 })
+    })
+
+    it('explains instead of moving when the user is outside the mapped area', async () => {
+      const map = await loadParksOnMap(birminghamParks)
+      const button = mountRecenterButton(map)
+      reportPosition(-0.12, 51.5) // London
+
+      fireEvent.click(button)
+
+      expect(map.flyTo).not.toHaveBeenCalled()
+      expect(toast).toHaveBeenCalledWith("You're outside the area OpenParks covers")
     })
   })
 

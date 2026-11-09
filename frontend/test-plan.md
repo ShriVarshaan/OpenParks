@@ -196,6 +196,10 @@ Geolocation is faked: `navigator.geolocation.watchPosition` captures the positio
 | UT-PM-17 | Stays on the parks when the user is outside the mapped area | Load parks, report London (−0.12, 51.5) | `flyTo` not called | Not called | PASS |
 | UT-PM-18 | Only recentres on the first location fix | Load parks, report two positions | `flyTo` called once | Called once | PASS |
 | UT-PM-19 | Still centres on the user inside the default area when the parks fail to load | `/api/parks` rejects; report (−1.9, 52.45) | `flyTo` to the user | Called as expected | PASS |
+| UT-PM-20 | Hides the recentre button until the user's location is known | Mount the `RecenterControl` element; then report a position | Hidden before the fix, visible after | As expected | PASS |
+| UT-PM-21 | Recentre button flies to the user's latest location | Report two positions, click 'Show my location' | `flyTo({ center: [-1.88, 52.47], zoom: 15 })` (the second position) | As expected | PASS |
+| UT-PM-22 | Recentring keeps a closer zoom | Map zoom 17.5, click 'Show my location' | `flyTo` with `zoom: 17.5` | As expected | PASS |
+| UT-PM-23 | Recentre button explains instead of moving when the user is outside the mapped area | Report London, click 'Show my location' | No `flyTo`; toast "You're outside the area OpenParks covers" | As expected | PASS |
 
 ---
 

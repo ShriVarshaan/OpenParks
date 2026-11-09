@@ -8,6 +8,7 @@ import reviewRoutes from "./routes/reviewRoutes.js"
 import trailRoutes from "./routes/trailRoutes.js"
 import userRoutes from "./routes/accountRoutes.js"
 import cors from "cors"
+import compression from "compression"
 //import emailRoutes from "./routes/emailRoutes.js"
 import "./config/passport.js"
 import "./config/prisma.js"
@@ -20,6 +21,10 @@ app.use(cors({
     origin: parseCorsOrigins(process.env.CORS_ORIGINS),
     credentials: true
 }))
+
+// The map loads every park, trail and amenity as GeoJSON on startup (~1.3 MB for
+// Birmingham); gzip cuts that to ~260 KB.
+app.use(compression())
 
 app.use(express.json())
 

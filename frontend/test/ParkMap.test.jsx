@@ -43,6 +43,7 @@ vi.mock('maplibre-gl', () => ({
       getCenter: vi.fn().mockReturnValue({ lng: -1.905, lat: 52.4484 }),
       fitBounds: vi.fn(),
       flyTo: vi.fn(),
+      jumpTo: vi.fn(),
     })),
     LngLatBounds: vi.fn().mockImplementation(([[w, s], [e, n]]) => ({
       contains: ({ lng, lat }) => lng >= w && lng <= e && lat >= s && lat <= n,
@@ -201,15 +202,15 @@ describe('MapRenderer (ParkMap)', () => {
 
     const birminghamParks = parksAround(-2.0, -1.75, 52.4, 52.6)
 
-    it('flies to the user when their location arrives after the parks load', async () => {
+    it('moves straight to the user (no animation) when their location arrives after the parks load', async () => {
       const map = await loadParksOnMap(birminghamParks)
 
       reportPosition(-1.89, 52.48)
 
-      expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.89, 52.48], zoom: 15 })
+      expect(map.jumpTo).toHaveBeenCalledWith({ center: [-1.89, 52.48], zoom: 15 })
     })
 
-    it('flies to the user once the parks load when their location arrives first', async () => {
+    it('moves to the user once the parks load when their location arrives first', async () => {
       mockApiAfterLoad(birminghamParks)
       render(
         <BrowserRouter>
@@ -218,11 +219,11 @@ describe('MapRenderer (ParkMap)', () => {
       )
       const map = maplibregl.Map.mock.results[0].value
       reportPosition(-1.89, 52.48)
-      expect(map.flyTo).not.toHaveBeenCalled()
+      expect(map.jumpTo).not.toHaveBeenCalled()
 
       map.on.mock.calls.find(([event]) => event === 'load')[1]()
 
-      await waitFor(() => expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.89, 52.48], zoom: 15 }))
+      await waitFor(() => expect(map.jumpTo).toHaveBeenCalledWith({ center: [-1.89, 52.48], zoom: 15 }))
     })
 
     it('stays on the parks when the user is outside the mapped area', async () => {
@@ -230,7 +231,7 @@ describe('MapRenderer (ParkMap)', () => {
 
       reportPosition(-0.12, 51.5) // London
 
-      expect(map.flyTo).not.toHaveBeenCalled()
+      expect(map.jumpTo).not.toHaveBeenCalled()
     })
 
     it('only recentres on the first location fix, so the user can pan away', async () => {
@@ -239,7 +240,7 @@ describe('MapRenderer (ParkMap)', () => {
       reportPosition(-1.89, 52.48)
       reportPosition(-1.88, 52.47)
 
-      expect(map.flyTo).toHaveBeenCalledTimes(1)
+      expect(map.jumpTo).toHaveBeenCalledTimes(1)
     })
 
     it('still centres on the user inside the default area when the parks fail to load', async () => {
@@ -256,7 +257,7 @@ describe('MapRenderer (ParkMap)', () => {
       map.on.mock.calls.find(([event]) => event === 'load')[1]()
       reportPosition(-1.9, 52.45)
 
-      await waitFor(() => expect(map.flyTo).toHaveBeenCalledWith({ center: [-1.9, 52.45], zoom: 15 }))
+      await waitFor(() => expect(map.jumpTo).toHaveBeenCalledWith({ center: [-1.9, 52.45], zoom: 15 }))
     })
 
     // The control is a real MapLibre control; mount its element the way MapLibre would.
@@ -314,6 +315,53 @@ describe('MapRenderer (ParkMap)', () => {
 
       expect(map.flyTo).not.toHaveBeenCalled()
       expect(toast).toHaveBeenCalledWith("You're outside the area OpenParks covers")
+    })
+
+    describe('opening where the user was last time', () => {
+      const renderMap = () => {
+        render(
+          <BrowserRouter>
+            <MapRenderer />
+          </BrowserRouter>
+        )
+        return maplibregl.Map.mock.calls[0][0]
+      }
+
+      it('starts the map at the last known location, zoomed in', () => {
+        localStorage.setItem('openparks.lastLocation', JSON.stringify([-1.83, 52.56])) // Sutton Park
+
+        const options = renderMap()
+
+        expect(options.center).toEqual([-1.83, 52.56])
+        expect(options.zoom).toBe(15)
+      })
+
+      it('starts at the default view without a last known location', () => {
+        const options = renderMap()
+
+        expect(options.center).toEqual([-1.905, 52.4484])
+      })
+
+      it('ignores a last known location outside the mapped area', () => {
+        localStorage.setItem('openparks.lastLocation', JSON.stringify([-0.12, 51.5])) // London
+
+        expect(renderMap().center).toEqual([-1.905, 52.4484])
+      })
+
+      it('ignores a corrupt saved location', () => {
+        localStorage.setItem('openparks.lastLocation', '{not json')
+
+        expect(renderMap().center).toEqual([-1.905, 52.4484])
+      })
+
+      it('remembers each location fix for next time', () => {
+        renderMap()
+
+        reportPosition(-1.89, 52.48)
+        reportPosition(-1.88, 52.47)
+
+        expect(JSON.parse(localStorage.getItem('openparks.lastLocation'))).toEqual([-1.88, 52.47])
+      })
     })
   })
 

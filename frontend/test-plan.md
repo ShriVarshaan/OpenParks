@@ -191,15 +191,20 @@ Geolocation is faked: `navigator.geolocation.watchPosition` captures the positio
 
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
-| UT-PM-15 | Flies to the user when their location arrives after the parks load | Load parks, then report (−1.89, 52.48) | `map.flyTo({ center: [-1.89, 52.48], zoom: 15 })` | Called as expected | PASS |
-| UT-PM-16 | Flies to the user once the parks load when their location arrives first | Report location, then fire map `load` | No `flyTo` before load; `flyTo` to the user after the parks load | Called after load only | PASS |
-| UT-PM-17 | Stays on the parks when the user is outside the mapped area | Load parks, report London (−0.12, 51.5) | `flyTo` not called | Not called | PASS |
-| UT-PM-18 | Only recentres on the first location fix | Load parks, report two positions | `flyTo` called once | Called once | PASS |
-| UT-PM-19 | Still centres on the user inside the default area when the parks fail to load | `/api/parks` rejects; report (−1.9, 52.45) | `flyTo` to the user | Called as expected | PASS |
+| UT-PM-15 | Moves straight to the user (no animation) when their location arrives after the parks load | Load parks, then report (−1.89, 52.48) | `map.jumpTo({ center: [-1.89, 52.48], zoom: 15 })` | Called as expected | PASS |
+| UT-PM-16 | Moves to the user once the parks load when their location arrives first | Report location, then fire map `load` | No `jumpTo` before load; `jumpTo` to the user after the parks load | Called after load only | PASS |
+| UT-PM-17 | Stays on the parks when the user is outside the mapped area | Load parks, report London (−0.12, 51.5) | `jumpTo` not called | Not called | PASS |
+| UT-PM-18 | Only recentres on the first location fix | Load parks, report two positions | `jumpTo` called once | Called once | PASS |
+| UT-PM-19 | Still centres on the user inside the default area when the parks fail to load | `/api/parks` rejects; report (−1.9, 52.45) | `jumpTo` to the user | Called as expected | PASS |
 | UT-PM-20 | Hides the recentre button until the user's location is known | Mount the `RecenterControl` element; then report a position | Hidden before the fix, visible after | As expected | PASS |
 | UT-PM-21 | Recentre button flies to the user's latest location | Report two positions, click 'Show my location' | `flyTo({ center: [-1.88, 52.47], zoom: 15 })` (the second position) | As expected | PASS |
 | UT-PM-22 | Recentring keeps a closer zoom | Map zoom 17.5, click 'Show my location' | `flyTo` with `zoom: 17.5` | As expected | PASS |
 | UT-PM-23 | Recentre button explains instead of moving when the user is outside the mapped area | Report London, click 'Show my location' | No `flyTo`; toast "You're outside the area OpenParks covers" | As expected | PASS |
+| UT-PM-24 | Starts the map at the last known location, zoomed in | `localStorage['openparks.lastLocation'] = [-1.83, 52.56]` | Map created with `center: [-1.83, 52.56]`, `zoom: 15` | As expected | PASS |
+| UT-PM-25 | Starts at the default view without a last known location | Empty localStorage | Map created with `center: [-1.905, 52.4484]` | As expected | PASS |
+| UT-PM-26 | Ignores a last known location outside the mapped area | Saved location in London | Default centre | As expected | PASS |
+| UT-PM-27 | Ignores a corrupt saved location | Saved value `{not json` | Default centre | As expected | PASS |
+| UT-PM-28 | Remembers each location fix for next time | Report two positions | localStorage holds the second position | As expected | PASS |
 
 ---
 

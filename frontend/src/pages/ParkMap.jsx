@@ -81,10 +81,36 @@ const HIGH_CONTRAST_MAP_PAINT = {
   contrast: 0.75,
 }
 
-// Pan limits until the parks load (and if they fail to).
-const DEFAULT_BOUNDS = [[-1.96, 52.42], [-1.86, 52.48]]
+// Pan limits until the parks load (and if they fail to): the City of Birmingham.
+const DEFAULT_BOUNDS = [[-2.044, 52.371], [-1.718, 52.619]]
+const DEFAULT_VIEW = { center: [-1.905, 52.4484], zoom: 15.4 }
 // Street level: close enough to see the parks near the user.
 const USER_ZOOM = 15
+
+// The user's last location, so the map can open there instead of panning once the
+// browser reports it. Stays in this browser; storage can be blocked, so never throw.
+const LAST_LOCATION_KEY = 'openparks.lastLocation'
+const inBounds = ([[w, s], [e, n]], [lng, lat]) => lng >= w && lng <= e && lat >= s && lat <= n
+function loadLastLocation() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAST_LOCATION_KEY))
+    const valid = Array.isArray(saved) && saved.length === 2 && saved.every(Number.isFinite)
+    return valid && inBounds(DEFAULT_BOUNDS, saved) ? saved : null
+  } catch {
+    return null
+  }
+}
+function saveLastLocation(fix) {
+  try {
+    localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(fix))
+  } catch {
+    // Storage unavailable (private window, blocked site data): opening at the default view is fine.
+  }
+}
+function startView() {
+  const last = loadLastLocation()
+  return last ? { center: last, zoom: USER_ZOOM } : DEFAULT_VIEW
+}
 
 export default function MapRenderer() {
   const navigate = useNavigate()
@@ -110,8 +136,9 @@ export default function MapRenderer() {
     const fix = userFixRef.current
     if (!map || !panBoundsRef.current || !fix || centredOnUserRef.current) return
     centredOnUserRef.current = true
+    // Snap, don't animate: usually the map already opened here from the last known location.
     if (isInMappedArea(fix)) {
-      map.flyTo({ center: fix, zoom: USER_ZOOM })
+      map.jumpTo({ center: fix, zoom: USER_ZOOM })
     }
   }
   const recentreOnUser = () => {
@@ -302,8 +329,7 @@ export default function MapRenderer() {
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: normalStyle,
-      center: [-1.9050, 52.4484],
-      zoom: 15.4,
+      ...startView(),
       minZoom: 13,
       maxZoom: 19,
       // Fallback until the parks load; then the limits grow to cover every park (see below).
@@ -606,6 +632,7 @@ export default function MapRenderer() {
       ({ coords }) => {
         const { longitude, latitude } = coords
         latestFixRef.current = [longitude, latitude]
+        saveLastLocation(latestFixRef.current)
         recenterControlRef.current?.setAvailable(true)
         if (!userFixRef.current) {
           userFixRef.current = [longitude, latitude]

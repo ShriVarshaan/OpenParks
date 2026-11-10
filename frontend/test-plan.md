@@ -187,22 +187,22 @@ Each component is tested in complete isolation. API calls, navigation, toast not
 
 ### 4.5.6 Centring on the User
 
-Geolocation is faked: `navigator.geolocation.watchPosition` captures the position callback and the test fires it. Parks cover lng −2.0…−1.75, lat 52.4…52.6.
+Geolocation is faked: `navigator.geolocation.watchPosition` captures the position callback and the test fires it. Parks cover lng −2.0…−1.75, lat 52.4…52.6. The pan limits cover the whole UK, so "outside" means outside the UK.
 
 | Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|
 | UT-PM-15 | Moves straight to the user (no animation) when their location arrives after the parks load | Load parks, then report (−1.89, 52.48) | `map.jumpTo({ center: [-1.89, 52.48], zoom: 15 })` | Called as expected | PASS |
 | UT-PM-16 | Moves to the user once the parks load when their location arrives first | Report location, then fire map `load` | No `jumpTo` before load; `jumpTo` to the user after the parks load | Called after load only | PASS |
-| UT-PM-17 | Stays on the parks when the user is outside the mapped area | Load parks, report London (−0.12, 51.5) | `jumpTo` not called | Not called | PASS |
+| UT-PM-17 | Stays on the parks when the user is outside the UK | Load parks, report Paris (2.35, 48.85) | `jumpTo` not called | Not called | PASS |
 | UT-PM-18 | Only recentres on the first location fix | Load parks, report two positions | `jumpTo` called once | Called once | PASS |
 | UT-PM-19 | Still centres on the user inside the default area when the parks fail to load | `/api/parks` rejects; report (−1.9, 52.45) | `jumpTo` to the user | Called as expected | PASS |
 | UT-PM-20 | Hides the recentre button until the user's location is known | Mount the `RecenterControl` element; then report a position | Hidden before the fix, visible after | As expected | PASS |
 | UT-PM-21 | Recentre button flies to the user's latest location | Report two positions, click 'Show my location' | `flyTo({ center: [-1.88, 52.47], zoom: 15 })` (the second position) | As expected | PASS |
 | UT-PM-22 | Recentring keeps a closer zoom | Map zoom 17.5, click 'Show my location' | `flyTo` with `zoom: 17.5` | As expected | PASS |
-| UT-PM-23 | Recentre button explains instead of moving when the user is outside the mapped area | Report London, click 'Show my location' | No `flyTo`; toast "You're outside the area OpenParks covers" | As expected | PASS |
+| UT-PM-23 | Recentre button explains instead of moving when the user is outside the UK | Report Paris, click 'Show my location' | No `flyTo`; toast "You're outside the area OpenParks covers" | As expected | PASS |
 | UT-PM-24 | Starts the map at the last known location, zoomed in | `localStorage['openparks.lastLocation'] = [-1.83, 52.56]` | Map created with `center: [-1.83, 52.56]`, `zoom: 15` | As expected | PASS |
 | UT-PM-25 | Starts at the default view without a last known location | Empty localStorage | Map created with `center: [-1.905, 52.4484]` | As expected | PASS |
-| UT-PM-26 | Ignores a last known location outside the mapped area | Saved location in London | Default centre | As expected | PASS |
+| UT-PM-26 | Ignores a last known location outside the UK | Saved location in Paris | Default centre | As expected | PASS |
 | UT-PM-27 | Ignores a corrupt saved location | Saved value `{not json` | Default centre | As expected | PASS |
 | UT-PM-28 | Remembers each location fix for next time | Report two positions | localStorage holds the second position | As expected | PASS |
 
@@ -235,3 +235,9 @@ Test Files7 passedTotal Tests63 passedLoginPage11 passedReportPage9 passedReview
 ## 6 Bug Fixes During Testing
 
 During test setup, a typo was identified and fixed in the shared test setup file (test/setup.js). The localStorage mock was declared as loaclStorageMock but referenced as localStorageMock, causing all test suites to fail with a ReferenceError. Correcting the spelling resolved the issue and allowed all 63 tests to run successfully.
+### Map pan limits (ParkMap)
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-PM-27 | Opens with pan limits covering the whole UK and a low minimum zoom | Render MapRenderer | `maxBounds` = UK box `[[-8.7, 49.8], [1.9, 60.95]]`, `minZoom` ≤ 6 | As expected | PASS |
+| UT-PM-28 | Pan limits and view are unchanged when parks load | Load parks around London | `setMaxBounds`, `setMinZoom`, `fitBounds` not called | Not called | PASS |

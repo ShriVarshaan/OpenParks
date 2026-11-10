@@ -105,29 +105,6 @@ describe('MapRenderer (ParkMap)', () => {
       Promise.resolve({ data: url === '/api/parks' ? parks : url === '/api/trails' ? mockGeojson : [] })
     )
 
-  it('lets the map pan to every loaded park, wherever it is', async () => {
-    const parks = {
-      type: 'FeatureCollection',
-      features: [
-        { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-2.5, 52.0], [-2.4, 52.0], [-2.4, 52.1], [-2.5, 52.0]]] } },
-      ],
-    }
-    mockApiAfterLoad(parks)
-    render(
-      <BrowserRouter>
-        <MapRenderer />
-      </BrowserRouter>
-    )
-    const map = maplibregl.Map.mock.results[0].value
-    const onLoad = map.on.mock.calls.find(([event]) => event === 'load')[1]
-
-    onLoad()
-
-    await waitFor(() => expect(map.setMaxBounds).toHaveBeenCalledTimes(1))
-    const [[w, s], [e, n]] = map.setMaxBounds.mock.calls[0][0]
-    expect([w, s, e, n].map((v) => Number(v.toFixed(6)))).toEqual([-2.51, 51.99, -2.39, 52.11])
-  })
-
   const loadParksOnMap = async (parks, setup = () => {}) => {
     mockApiAfterLoad(parks)
     render(
@@ -138,7 +115,7 @@ describe('MapRenderer (ParkMap)', () => {
     const map = maplibregl.Map.mock.results[0].value
     setup(map)
     map.on.mock.calls.find(([event]) => event === 'load')[1]()
-    await waitFor(() => expect(map.setMaxBounds).toHaveBeenCalled())
+    await waitFor(() => expect(map.addSource).toHaveBeenCalledWith('park-boundary', expect.anything()))
     return map
   }
   const parksAround = (west, east, south, north) => ({
@@ -146,38 +123,26 @@ describe('MapRenderer (ParkMap)', () => {
     features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]] } }],
   })
 
-  it('allows zooming out far enough to see every park when they span more than one screen', async () => {
-    const map = await loadParksOnMap(parksAround(-2.5, -1.8, 52.0, 52.5), (m) => m.cameraForBounds.mockReturnValue({ zoom: 10.6 }))
+  const UK_BOUNDS = [[-8.7, 49.8], [1.9, 60.95]]
 
-    expect(map.setMinZoom).toHaveBeenCalledWith(10)
-  })
-
-  it('moves the view to the parks when the start point is outside them', async () => {
-    const parks = parksAround(-2.5, -2.4, 52.0, 52.1)
-    const map = await loadParksOnMap(parks)
-
-    expect(map.fitBounds).toHaveBeenCalledWith(map.setMaxBounds.mock.calls[0][0], { animate: false })
-  })
-
-  it('leaves the view and zoom limits alone when the start point is among the parks', async () => {
-    const map = await loadParksOnMap(parksAround(-1.95, -1.87, 52.43, 52.47))
-
-    expect(map.fitBounds).not.toHaveBeenCalled()
-    expect(map.setMinZoom).not.toHaveBeenCalled()
-  })
-
-  it('keeps the default pan limits when no parks load', async () => {
-    mockApiAfterLoad(mockGeojson)
+  it('opens with pan limits covering the whole UK and lets users zoom out to see it', () => {
     render(
       <BrowserRouter>
         <MapRenderer />
       </BrowserRouter>
     )
-    const map = maplibregl.Map.mock.results[0].value
-    map.on.mock.calls.find(([event]) => event === 'load')[1]()
+    const options = maplibregl.Map.mock.calls[0][0]
 
-    await waitFor(() => expect(map.addSource).toHaveBeenCalledWith('park-boundary', expect.anything()))
+    expect(options.maxBounds).toEqual(UK_BOUNDS)
+    expect(options.minZoom).toBeLessThanOrEqual(6)
+  })
+
+  it('keeps the UK pan limits and view once parks load, wherever the parks are', async () => {
+    const map = await loadParksOnMap(parksAround(-0.3, 0.1, 51.4, 51.6)) // London
+
     expect(map.setMaxBounds).not.toHaveBeenCalled()
+    expect(map.setMinZoom).not.toHaveBeenCalled()
+    expect(map.fitBounds).not.toHaveBeenCalled()
   })
 
   describe('centring on the user', () => {
@@ -229,7 +194,7 @@ describe('MapRenderer (ParkMap)', () => {
     it('stays on the parks when the user is outside the mapped area', async () => {
       const map = await loadParksOnMap(birminghamParks)
 
-      reportPosition(-0.12, 51.5) // London
+      reportPosition(2.35, 48.85) // Paris
 
       expect(map.jumpTo).not.toHaveBeenCalled()
     })
@@ -309,7 +274,7 @@ describe('MapRenderer (ParkMap)', () => {
     it('explains instead of moving when the user is outside the mapped area', async () => {
       const map = await loadParksOnMap(birminghamParks)
       const button = mountRecenterButton(map)
-      reportPosition(-0.12, 51.5) // London
+      reportPosition(2.35, 48.85) // Paris
 
       fireEvent.click(button)
 
@@ -343,7 +308,7 @@ describe('MapRenderer (ParkMap)', () => {
       })
 
       it('ignores a last known location outside the mapped area', () => {
-        localStorage.setItem('openparks.lastLocation', JSON.stringify([-0.12, 51.5])) // London
+        localStorage.setItem('openparks.lastLocation', JSON.stringify([2.35, 48.85])) // Paris
 
         expect(renderMap().center).toEqual([-1.905, 52.4484])
       })

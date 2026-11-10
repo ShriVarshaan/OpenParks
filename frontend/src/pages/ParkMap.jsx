@@ -5,7 +5,6 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import API from "../api/axiosInstance.js"
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon"
 import { point } from "@turf/helpers"
-import { computeBounds } from '../utils/geo'
 import { RecenterControl } from '../components/RecenterControl'
 import toast from 'react-hot-toast'
 
@@ -81,8 +80,9 @@ const HIGH_CONTRAST_MAP_PAINT = {
   contrast: 0.75,
 }
 
-// Pan limits until the parks load (and if they fail to): the City of Birmingham.
-const DEFAULT_BOUNDS = [[-2.044, 52.371], [-1.718, 52.619]]
+// Pan limits: the whole United Kingdom (incl. Shetland and Northern Ireland), so users can
+// scroll anywhere even though park data only covers some cities.
+const DEFAULT_BOUNDS = [[-8.7, 49.8], [1.9, 60.95]]
 const DEFAULT_VIEW = { center: [-1.905, 52.4484], zoom: 15.4 }
 // Street level: close enough to see the parks near the user.
 const USER_ZOOM = 15
@@ -330,9 +330,9 @@ export default function MapRenderer() {
       container: mapContainer.current,
       style: normalStyle,
       ...startView(),
-      minZoom: 13,
+      // Low enough to zoom out and see the whole UK.
+      minZoom: 5,
       maxZoom: 19,
-      // Fallback until the parks load; then the limits grow to cover every park (see below).
       maxBounds: DEFAULT_BOUNDS,
     })
 
@@ -349,19 +349,8 @@ export default function MapRenderer() {
 
           parkPolygonsRef.current = r.data
 
-          // Let users pan to every park in the database, not just the original area.
-          const bounds = computeBounds(r.data)
-          if (bounds) {
-            map.setMaxBounds(bounds)
-            // Parks spread wider than a screen at the minimum zoom: allow zooming out to see them all.
-            const fit = map.cameraForBounds(bounds)
-            if (fit && fit.zoom < map.getMinZoom()) map.setMinZoom(Math.floor(fit.zoom))
-            // The fixed start view may be outside the parks (e.g. the original area was replaced).
-            if (!new maplibregl.LngLatBounds(bounds).contains(map.getCenter())) {
-              map.fitBounds(bounds, { animate: false })
-            }
-          }
-          panBoundsRef.current = bounds ?? DEFAULT_BOUNDS
+          // Pan limits stay the whole UK; parks only cover some areas of it.
+          panBoundsRef.current = DEFAULT_BOUNDS
           centreOnUserWhenReady()
 
           map.addSource('park-boundary', {

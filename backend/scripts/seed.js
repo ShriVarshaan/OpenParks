@@ -76,6 +76,7 @@ const CURRENT_PARK = Prisma.sql`(p.osm_id IS NULL OR EXISTS (
 
 async function loadTrails(tx, trails) {
   // Each trail goes to the single park it overlaps most; trails touching no park are skipped.
+  // The `&&` bounding-box test lets Postgres use the geography GiST index; a ::geometry cast alone cannot.
   await tx.$executeRaw`
     INSERT INTO trails (park_id, osm_id, highway, name, surface, geom)
     SELECT best.id, t.osm_id, t.highway, t.name, t.surface, t.geom
@@ -91,7 +92,7 @@ async function loadTrails(tx, trails) {
     CROSS JOIN LATERAL (
       SELECT p.id
       FROM "Park" p
-      WHERE ST_Intersects(p.location::geometry, t.geom) AND ${CURRENT_PARK}
+      WHERE p.location && t.geom::geography AND ST_Intersects(p.location::geometry, t.geom) AND ${CURRENT_PARK}
       ORDER BY ST_Length(ST_Intersection(p.location::geometry, t.geom)::geography) DESC, p.id
       LIMIT 1
     ) best`;
@@ -158,7 +159,7 @@ export async function seed({ prisma, data, warn = () => {} }) {
       await loadAmenities(tx, data.amenities);
       demoUser = await loadDemoData(tx);
     },
-    { timeout: 120000 }
+    { timeout: 600000 }
   );
   return { ...(await countRows(prisma)), demoUser };
 }

@@ -2,8 +2,23 @@
   "areas": [
     {
       "name": "Birmingham",
-      "bbox": [52.381, -2.034, 52.609, -1.728],
+      "bbox": [
+        52.381,
+        -2.034,
+        52.609,
+        -1.728
+      ],
       "boundary": "relation/162378"
+    },
+    {
+      "name": "London",
+      "bbox": [
+        51.28,
+        -0.52,
+        51.7,
+        0.34
+      ],
+      "boundary": "relation/175342"
     }
   ],
   "exclude": []

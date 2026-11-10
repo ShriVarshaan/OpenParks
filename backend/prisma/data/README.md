@@ -18,7 +18,7 @@ These files are committed so that setting up the app needs no network access:
    or add `"way/<id>"` / `"relation/<id>"` to `exclude` to drop a park.
    An area can also have a `boundary` (`"relation/<id>"` of an OSM administrative boundary). Parks are then
    limited to that boundary, so a bbox around an irregular city doesn't pick up its neighbours' parks.
-   The current snapshot covers the City of Birmingham (`relation/162378`).
+   The current snapshot covers the City of Birmingham (`relation/162378`) and Greater London (`relation/175342`).
 2. From `backend/`, run `npm run parks:fetch`. It queries the public Overpass API, retries if the server is busy,
    and only overwrites these files if every request succeeds.
 3. Run `npm run db:seed` to load the new data, then commit the updated `.geojson` files.

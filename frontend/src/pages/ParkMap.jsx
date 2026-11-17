@@ -7,6 +7,7 @@ import booleanPointInPolygon from "@turf/boolean-point-in-polygon"
 import { point } from "@turf/helpers"
 import { RecenterControl } from '../components/RecenterControl'
 import toast from 'react-hot-toast'
+import { getUserIdFromToken } from '../utils/auth'
 
 const TRAIL_TYPES = [
   { label: 'Footpath',       color: '#5a9e4f' },
@@ -262,11 +263,14 @@ export default function MapRenderer() {
   const DEFAULT_AMENITY = { emoji: '📍', color: '#888', label: 'Amenity' }
 
   function buildReportPopupHTML(report) {
+    // Only the reporter can resolve a report (the API enforces this too).
+    const isOwnReport = report.user_id != null &&
+      report.user_id === getUserIdFromToken(localStorage.getItem('token'))
     return `
       <div style="padding: 5px; font-family: sans-serif; word-wrap: break-word; overflow-wrap: break-word; max-width: 220px;">
         <b style="color: #2d6a4f;">${report.heading}</b>
         <p style="margin: 4px 0 6px; font-size: 12px; color: #444; word-wrap: break-word; overflow-wrap: break-word;">${report.description}</p>
-        ${isLoggedIn ? 
+        ${isOwnReport ?
           `<button
             onclick="window.__resolveReport('${report.id}', this)"
             style="
@@ -302,7 +306,13 @@ export default function MapRenderer() {
           const entry = reportsMarkersRef.current.find(m => m.reportId === reportId)
           if (entry) { entry.marker.remove(); reportsMarkersRef.current = reportsMarkersRef.current.filter(m => m.reportId !== reportId) }
         }, 800)
-      } catch { btn.disabled = false; btn.textContent = '✓ Mark as resolved' }
+      } catch (err) {
+        btn.disabled = false
+        btn.textContent = '✓ Mark as resolved'
+        toast.error(err.response?.status === 403
+          ? 'You can only resolve your own reports'
+          : 'Could not resolve the report, try again')
+      }
     }
     return () => { delete window.__resolveReport }
   }, [])

@@ -232,6 +232,8 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 |---|---|---|---|---|---|
 | UT-SR-05 | Returns 404 if report not found | `findUnique` returns null | `status 404`, body: `{ message: 'report not found' }` | status 404 | PASS |
 | UT-SR-06 | Updates report status successfully | `findUnique` returns report, `update` resolves | `status 200`, body: updated report object | status 200 | PASS |
+| UT-SR-06b | Refuses to resolve another user's report | Report `user_id: 1`, `req.user.id: 2` | `status 403`, body: `{ message: 'You can only resolve your own reports' }`; `update` not called | as expected | PASS |
+| UT-SR-06c | Matches a string JWT user id to the numeric reporter id | Report `user_id: 1`, `req.user.id: "1"` | `status 200` | as expected | PASS |
 | UT-SR-07 | Returns 400 for Prisma P2002 constraint error | `update` rejects with `error.code P2002` | `status 400`, body: `{ error: 'Invalid error code' }` | status 400  | PASS |
 | UT-SR-08 | Returns 500 for unknown update errors | `update` rejects with generic Error | `status 500`, body: `{ error: 'Server error' }` | status 500 |  PASS |
 

@@ -302,6 +302,28 @@ describe("updateReport", () => {
         });
     });
 
+    describe("403 – report filed by another user", () => {
+        const otherUserReq = buildReq({ params: { reportid: "1" }, user: { id: 2 } });
+
+        it("returns 403 when the logged-in user is not the reporter", async () => {
+            prisma.safetyReport.findUnique.mockResolvedValue(mockReport);
+            const res = buildRes();
+
+            await updateReport(otherUserReq, res);
+
+            expect(res.status).toHaveBeenCalledWith(403);
+            expect(res.json).toHaveBeenCalledWith({ message: "You can only resolve your own reports" });
+        });
+
+        it("does not call safetyReport.update for another user's report", async () => {
+            prisma.safetyReport.findUnique.mockResolvedValue(mockReport);
+
+            await updateReport(otherUserReq, buildRes());
+
+            expect(prisma.safetyReport.update).not.toHaveBeenCalled();
+        });
+    });
+
     describe("400 – Prisma unique constraint error (P2002)", () => {
         it("returns 400 for a P2002 error code", async () => {
             prisma.safetyReport.findUnique.mockResolvedValue(mockReport);

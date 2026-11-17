@@ -241,3 +241,18 @@ During test setup, a typo was identified and fixed in the shared test setup file
 |---|---|---|---|---|---|
 | UT-PM-27 | Opens with pan limits covering the whole UK and a low minimum zoom | Render MapRenderer | `maxBounds` = UK box `[[-8.7, 49.8], [1.9, 60.95]]`, `minZoom` ≤ 6 | As expected | PASS |
 | UT-PM-28 | Pan limits and view are unchanged when parks load | Load parks around London | `setMaxBounds`, `setMinZoom`, `fitBounds` not called | Not called | PASS |
+
+### Resolving safety reports (ParkMap, utils/auth)
+
+Only the reporter may resolve a report; the API returns 403 otherwise. The map reads the user id from the stored JWT (`getUserIdFromToken`) to decide whether to show the button.
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-AU-01 | Reads the user id from a token | Token payload `{ id: 42 }` | Returns `42` | As expected | PASS |
+| UT-AU-02 | Decodes base64url payloads | Payload containing `-`/`_` characters | Returns the id | As expected | PASS |
+| UT-AU-03 | Handles a missing token | `null` | Returns `null` | As expected | PASS |
+| UT-AU-04 | Handles a malformed token | `'not-a-jwt'` | Returns `null` | As expected | PASS |
+| UT-AU-05 | Handles a payload without an id | Payload `{ sub: 'x' }` | Returns `null` | As expected | PASS |
+| UT-PM-29 | Shows "Mark as resolved" only on the user's own reports | Token for user 1; Litter reports by users 1 and 2 | Button in user 1's popup only | As expected | PASS |
+| UT-PM-30 | Hides "Mark as resolved" when logged out | No token; one Litter report | No button | As expected | PASS |
+| UT-PM-31 | Explains a refused resolve | `API.patch` rejects with 403 | `toast.error('You can only resolve your own reports')`; button re-enabled | As expected | PASS |

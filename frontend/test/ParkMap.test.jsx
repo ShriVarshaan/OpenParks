@@ -508,4 +508,56 @@ describe('MapRenderer (ParkMap)', () => {
  
     expect(screen.getByText('✕')).toBeInTheDocument()
   })
+  describe('resolving safety reports', () => {
+    // An unsigned JWT-shaped token: the map only reads the user id from its payload.
+    const tokenForUser = (id) => `header.${btoa(JSON.stringify({ id }))}.signature`
+    const litterReport = (id, user_id) => ({
+      id, user_id, heading: 'Litter', description: `report ${id}`,
+      location: { type: 'Point', coordinates: [-1.9, 52.45] },
+    })
+
+    const showLitterReports = async (reports) => {
+      API.get.mockImplementation((url) =>
+        Promise.resolve({ data: url === '/api/safetyreport/Litter' ? reports : mockGeojson })
+      )
+      render(
+        <BrowserRouter>
+          <MapRenderer />
+        </BrowserRouter>
+      )
+      fireEvent.click(screen.getByText('Litter'))
+      await waitFor(() => expect(maplibregl.Popup).toHaveBeenCalledTimes(reports.length))
+      return maplibregl.Popup.mock.results.map((r) => r.value.setHTML.mock.calls[0][0])
+    }
+
+    it('offers "Mark as resolved" only on reports the logged-in user filed', async () => {
+      localStorage.setItem('token', tokenForUser(1))
+
+      const [own, others] = await showLitterReports([litterReport(10, 1), litterReport(11, 2)])
+
+      expect(own).toContain('Mark as resolved')
+      expect(others).not.toContain('Mark as resolved')
+    })
+
+    it('does not offer "Mark as resolved" when logged out', async () => {
+      const [html] = await showLitterReports([litterReport(10, 1)])
+
+      expect(html).not.toContain('Mark as resolved')
+    })
+
+    it("tells the user when the server refuses to resolve someone else's report", async () => {
+      render(
+        <BrowserRouter>
+          <MapRenderer />
+        </BrowserRouter>
+      )
+      API.patch.mockRejectedValue({ response: { status: 403 } })
+      const btn = { disabled: false, textContent: '', style: {} }
+
+      await window.__resolveReport('10', btn)
+
+      expect(toast.error).toHaveBeenCalledWith('You can only resolve your own reports')
+      expect(btn.disabled).toBe(false)
+    })
+  })
 })

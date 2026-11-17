@@ -99,6 +99,39 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 | UT-VE-01 | Sends a new OTP to the email address | `oneTimePasswords.findFirst` → null | `sendVerification('a@example.com')`; `status 401`, `{ message: 'No active OTP, new OTP sent' }` | as expected | PASS |
 | UT-VE-02 | Awaits the new OTP being sent | `sendVerification` resolves after a delay | Controller resolves only after the send settles | as expected | PASS |
 | UT-VE-03 | Answers 500 instead of crashing when the send fails | `sendVerification` rejects | `status 500`, `{ message: 'Could not send a new OTP, try again later' }`; no unhandled rejection | as expected | PASS |
+| UT-VE-04 | Does not email an address with no account | No active OTP; `user.findUnique` → null | `sendVerification` not called; `status 401`, `{ message: 'Invalid One Time Password' }` | as expected | PASS |
+| UT-VE-05 | Does not email an already verified account | No active OTP; user `Verified: true` | `sendVerification` not called; `status 401` | as expected | PASS |
+| UT-VE-06 | Answers 429 inside the send cooldown | `sendVerification` → false | `status 429`, `{ message: 'Please wait a minute before requesting another code' }` | as expected | PASS |
+
+#### 4.1.3b `resendOtp()` (validateEmail.js)
+
+Only unverified accounts are emailed, and unknown or verified addresses get the same 200 answer so the endpoint can't reveal who has signed up.
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-RO-01 | Emails an unverified account | User `Verified: false` | `sendVerification` called; `status 200`, generic message | as expected | PASS |
+| UT-RO-02 | Does not email an unknown address | `user.findUnique` → null | Not sent; same `status 200` and message | as expected | PASS |
+| UT-RO-03 | Does not email a verified account | User `Verified: true` | Not sent; `status 200` | as expected | PASS |
+| UT-RO-04 | Answers 429 inside the send cooldown | `sendVerification` → false | `status 429`, cooldown message | as expected | PASS |
+| UT-RO-05 | Rejects a missing email | `body: {}` | `status 400`; no DB lookup | as expected | PASS |
+| UT-RO-06 | Answers 500 when the send fails | `sendVerification` rejects | `status 500`, `{ message: 'Failed to send OTP' }` | as expected | PASS |
+
+#### 4.1.3c `sendVerification()` cooldown
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-SV-01 | Sends and returns true when no recent code exists | Recent-code lookup → null | OTP row created, mail sent, returns `true` | as expected | PASS |
+| UT-SV-02 | Sends nothing inside the cooldown | Recent-code lookup → a row | No OTP row, no mail, returns `false` | as expected | PASS |
+| UT-SV-03 | Looks back exactly `OTP_COOLDOWN_SECONDS` | Recent-code lookup → null | Query filters on `email` and `created_at > now − 60s` | as expected | PASS |
+
+#### 4.1.3d Rate limiting (middleware/rateLimit.js) and `parseTrustProxy()` (config/env.js)
+
+| Test ID | Description | Input / Setup | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| UT-RL-01 | Blocks requests over the limit | `createLimiter(3)`, 4 requests from one IP | First 3 call `next`; 4th answers 429 `{ message: 'Too many attempts, please try again later' }` | as expected | PASS |
+| UT-RL-02 | Counts each IP separately | `createLimiter(1)`, 2 IPs | Second IP is let through | as expected | PASS |
+| UT-RL-03 | OTP limit is tighter than login/signup | `OTP_LIMIT`, `AUTH_LIMIT` | `OTP_LIMIT < AUTH_LIMIT` | as expected | PASS |
+| UT-ENV-TP | `parseTrustProxy` | `''`, `'1'`, `'true'`, `'false'`, subnet list | `false`, `1`, `true`, `false`, string unchanged | as expected | PASS |
 
 #### 4.1.4 `verifyJwtPayload()` (config/passport.js)
 
@@ -232,6 +265,8 @@ Each controller is tested in complete isolation. Database, crypto, JWT, and emai
 |---|---|---|---|---|---|
 | UT-SR-05 | Returns 404 if report not found | `findUnique` returns null | `status 404`, body: `{ message: 'report not found' }` | status 404 | PASS |
 | UT-SR-06 | Updates report status successfully | `findUnique` returns report, `update` resolves | `status 200`, body: updated report object | status 200 | PASS |
+| UT-SR-06b | Refuses to resolve another user's report | Report `user_id: 1`, `req.user.id: 2` | `status 403`, body: `{ message: 'You can only resolve your own reports' }`; `update` not called | as expected | PASS |
+| UT-SR-06c | Matches a string JWT user id to the numeric reporter id | Report `user_id: 1`, `req.user.id: "1"` | `status 200` | as expected | PASS |
 | UT-SR-07 | Returns 400 for Prisma P2002 constraint error | `update` rejects with `error.code P2002` | `status 400`, body: `{ error: 'Invalid error code' }` | status 400  | PASS |
 | UT-SR-08 | Returns 500 for unknown update errors | `update` rejects with generic Error | `status 500`, body: `{ error: 'Server error' }` | status 500 |  PASS |
 
@@ -506,6 +541,7 @@ Integration tests run against the full Express application stack including authe
 | UT-SR-21 | `updateReport` updates status to `RESOLVED` using the correct ID | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `findUnique` to resolve `mockReport`; mock `update`; call `updateReport` | `prisma.safetyReport.update` called with `{ where: { id: 1 }, data: { status: "RESOLVED" } }` | `prisma.safetyReport.update` called with correct arguments | PASS |
 | UT-SR-22 | `updateReport` returns 200 with the updated report | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `findUnique` to resolve `mockReport`; mock `update` to resolve `resolvedReport`; call `updateReport` | Response status 200; `res.json` called with `resolvedReport` | Response status 200; `res.json` called with `resolvedReport` | PASS |
 | UT-SR-23 | `updateReport` returns 400 for a Prisma P2002 unique constraint error | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `findUnique` to resolve `mockReport`; mock `update` to reject with error `{ code: "P2002" }`; call `updateReport` | Response status 400; `res.json` called with `{ error: "Invalid error code" }` | Response status 400; `res.json` called with `{ error: "Invalid error code" }` | PASS |
+| UT-SR-24b | `updateReport` refuses another user's report | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `findUnique` to resolve `mockReport` (`user_id: 1`); call `updateReport` as user 2 | Response status 403 with `{ message: "You can only resolve your own reports" }`; `update` not called | as expected | PASS |
 | UT-SR-24 | `updateReport` returns 500 for non-P2002 database errors | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `findUnique` to resolve `mockReport`; mock `update` to reject with `Error("DB crash")`; call `updateReport` | Response status 500; `res.json` called with `{ error: "Server error" }` | Response status 500; `res.json` called with `{ error: "Server error" }` | PASS |
 | UT-SR-25 | `updateReport` does not propagate thrown errors | ../../src/controllers/safetyReport.js, ../../src/config/prisma.js | Mock `prisma.safetyReport.findUnique` to reject with `Error("Timeout")`; await `updateReport` | Promise resolves without throwing | Promise resolved without throwing | PASS |
 

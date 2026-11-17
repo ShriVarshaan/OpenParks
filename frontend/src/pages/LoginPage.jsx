@@ -143,8 +143,9 @@ export default function LoginPage({ onLogin }) {
         setResendCooldown(60);
         inputRefs.current[0]?.focus();
         toast.success("New code sent");
-    } catch {
-        toast.error("Failed to resend code, please try again");
+    } catch (err) {
+        // e.g. 429 when a code was sent less than a minute ago, or too many attempts.
+        toast.error(err.response?.data?.message ?? "Failed to resend code, please try again");
     }
     setLoading(false);
 };

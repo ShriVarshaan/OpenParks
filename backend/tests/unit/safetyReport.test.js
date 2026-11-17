@@ -219,6 +219,7 @@ describe("safetyReportController - updateReport", () => {
   test("returns 404 if report does not exist", async () => {
     const req = {
       params: { id: "1", reportid: "10" },
+      user: { id: 1 },
       body: { status: "resolved" },
     };
     const res = createRes();
@@ -234,11 +235,12 @@ describe("safetyReportController - updateReport", () => {
   test("updates report status successfully", async () => {
     const req = {
       params: { id: "1", reportid: "10" },
+      user: { id: 1 },
       body: { status: "resolved" },
     };
     const res = createRes();
 
-    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1 });
+    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1, user_id: 1 });
     mockUpdate.mockResolvedValue({
       id: 10,
       status: "resolved",
@@ -257,14 +259,40 @@ describe("safetyReportController - updateReport", () => {
     });
   });
 
+  test("returns 403 and does not update when the user did not file the report", async () => {
+    const req = { params: { reportid: "10" }, user: { id: 2 } };
+    const res = createRes();
+
+    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1, user_id: 1 });
+
+    await updateReport(req, res);
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ message: "You can only resolve your own reports" });
+  });
+
+  test("treats a string user id from the JWT as the same user", async () => {
+    const req = { params: { reportid: "10" }, user: { id: "1" } };
+    const res = createRes();
+
+    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1, user_id: 1 });
+    mockUpdate.mockResolvedValue({ id: 10, status: "RESOLVED" });
+
+    await updateReport(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
   test("returns 400 for Prisma P2002 error", async () => {
     const req = {
       params: { id: "1", reportid: "10" },
+      user: { id: 1 },
       body: { status: "resolved" },
     };
     const res = createRes();
 
-    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1 });
+    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1, user_id: 1 });
     const error = new Error("Prisma error");
     error.code = "P2002";
     mockUpdate.mockRejectedValue(error);
@@ -278,11 +306,12 @@ describe("safetyReportController - updateReport", () => {
   test("returns 500 for other update errors", async () => {
     const req = {
       params: { id: "1", reportid: "10" },
+      user: { id: 1 },
       body: { status: "resolved" },
     };
     const res = createRes();
 
-    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1 });
+    mockFindUnique.mockResolvedValue({ id: 10, park_id: 1, user_id: 1 });
     mockUpdate.mockRejectedValue(new Error("Unknown error"));
 
     await updateReport(req, res);

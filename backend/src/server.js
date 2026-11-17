@@ -12,10 +12,13 @@ import compression from "compression"
 //import emailRoutes from "./routes/emailRoutes.js"
 import "./config/passport.js"
 import "./config/prisma.js"
-import { parseCorsOrigins } from "./config/env.js"
+import { parseCorsOrigins, parseTrustProxy } from "./config/env.js"
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000
+
+// Behind a hosting proxy, set TRUST_PROXY so rate limits see real client IPs.
+app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY))
 
 app.use(cors({
     origin: parseCorsOrigins(process.env.CORS_ORIGINS),

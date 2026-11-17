@@ -6,7 +6,23 @@ import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import { buildTransportOptions } from "../config/env.js"
 
+// Minimum gap between codes sent to one address, so the endpoints that send codes
+// can't be used to flood someone's inbox.
+export const OTP_COOLDOWN_SECONDS = 60
+
+// Returns true if a code was emailed, false if one was sent to this address
+// within the cooldown (nothing is sent then).
 export const sendVerification = async(recipient) =>{
+    const recent = await prisma.oneTimePasswords.findFirst({
+        where: {
+            email: recipient,
+            created_at: { gt: new Date(Date.now() - OTP_COOLDOWN_SECONDS * 1000) },
+        },
+    })
+    if (recent) {
+        return false
+    }
+
     const transporter = nodemailer.createTransport(buildTransportOptions());
 
     try {
@@ -37,7 +53,8 @@ export const sendVerification = async(recipient) =>{
         text: randomString,
         };
 
-        const info = await transporter.sendMail(mailOptions);
+        await transporter.sendMail(mailOptions);
+        return true
     } catch (err){
         throw err
     }

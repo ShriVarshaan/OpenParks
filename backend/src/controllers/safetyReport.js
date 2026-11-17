@@ -72,6 +72,11 @@ export const updateReport = async (req, res) => {
             return res.status(404).json({message: "report not found"})
         }
 
+        // Only the person who filed a report may mark it resolved.
+        if (report.user_id !== Number(req.user.id)){
+            return res.status(403).json({message: "You can only resolve your own reports"})
+        }
+
         const updatedReport = await prisma.safetyReport.update({where: {id: Number(req.params.reportid)}, data:{status: "RESOLVED"}})
         return res.status(200).json(updatedReport)
     } catch (err) {

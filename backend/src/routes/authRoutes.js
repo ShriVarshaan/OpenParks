@@ -1,26 +1,19 @@
 import express from "express"
 import {login, signup} from "../controllers/authController.js"
 import { validateUser, validateUserLogin } from "../middleware/user.js"
-import { checkValidOTP } from "../controllers/validateEmail.js"
-import { sendVerification } from "../controllers/sendVerification.js"
+import { checkValidOTP, resendOtp } from "../controllers/validateEmail.js"
+import { authLimiter, otpLimiter } from "../middleware/rateLimit.js"
 
 const router = express.Router()
 
 router.route("/login")
-    .post(validateUserLogin, login)
+    .post(authLimiter, validateUserLogin, login)
 
 router.route("/signup")
-    .post(validateUser, signup)
+    .post(authLimiter, validateUser, signup)
 
-router.post("/verify-otp", checkValidOTP)
+router.post("/verify-otp", otpLimiter, checkValidOTP)
 
-router.post("/resend-otp", async (req, res) => {
-    try {
-        await sendVerification(req.body.email);
-        return res.status(200).json({ message: "OTP sent" });
-    } catch (err) {
-        return res.status(500).json({ message: "Failed to send OTP" });
-    }
-});
+router.post("/resend-otp", otpLimiter, resendOtp)
 
 export default router

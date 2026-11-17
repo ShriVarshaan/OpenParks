@@ -1,4 +1,4 @@
-import { buildPoolConfig, buildTransportOptions, parseCorsOrigins } from "../../src/config/env.js";
+import { buildPoolConfig, buildTransportOptions, parseCorsOrigins, parseTrustProxy } from "../../src/config/env.js";
 
 const DEFAULT_ORIGINS = ["http://localhost:5173", "http://localhost:5174"];
 
@@ -45,5 +45,25 @@ describe("parseCorsOrigins", () => {
 
   test("splits, trims and drops empty entries", () => {
     expect(parseCorsOrigins("https://a.com, https://b.com,")).toEqual(["https://a.com", "https://b.com"]);
+  });
+});
+
+describe("parseTrustProxy", () => {
+  test("trusts no proxy by default, so rate limits key on the real client address locally", () => {
+    expect(parseTrustProxy(undefined)).toBe(false);
+    expect(parseTrustProxy("")).toBe(false);
+  });
+
+  test("reads a hop count as a number", () => {
+    expect(parseTrustProxy("1")).toBe(1);
+  });
+
+  test("reads true and false", () => {
+    expect(parseTrustProxy("true")).toBe(true);
+    expect(parseTrustProxy("false")).toBe(false);
+  });
+
+  test("passes other values (subnets, names) through to Express", () => {
+    expect(parseTrustProxy("loopback, 10.0.0.0/8")).toBe("loopback, 10.0.0.0/8");
   });
 });

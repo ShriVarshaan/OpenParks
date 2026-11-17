@@ -62,6 +62,8 @@ Each component is tested in complete isolation. API calls, navigation, toast not
 | UT-LP-08b | Shows a generic error when login fails on the server | API.post rejects with 500 | toast.error called with 'Something went wrong, please try again', not 'Invalid credentials' | Generic toast shown | PASS |
 | UT-LP-08c | Says the server cannot be reached when sign-up gets no response | Registration submit; API.post rejects with no `response` | toast.error called with 'Cannot reach the server. Is the backend running?' | Network toast shown | PASS |
 | UT-LP-08d | Does not store a token on sign-up | Signup resolves with a token | Success toast; `localStorage.token` stays null (login happens after OTP verify) | No token stored | PASS |
+| UT-LP-08e | Shows the server's reason when a resend is refused | Code screen; resend rejects 429 with a message | `toast.error` shows the server message | As expected | PASS |
+| UT-LP-08f | Generic message when a resend fails without a reason | Code screen; resend rejects with no response | `toast.error('Failed to resend code, please try again')` | As expected | PASS |
 | UT-LP-08e | Shows a generic error when sign-up fails on the server | Signup rejects with 500 | toast.error 'Something went wrong, please try again', not 'Invalid user/email/password fields' | Generic toast shown | PASS |
 | UT-LP-08f | Shows where to find the code when running locally | Sign up in a dev build | Code screen shows 'Running locally?…' with a link to http://localhost:8025 | Hint shown | PASS |
 | UT-LP-08g | Hides the local mail hint in production | `vi.stubEnv('DEV', false)`; sign up | No 'Running locally?' text | Hint hidden | PASS |

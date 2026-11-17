@@ -291,6 +291,30 @@ describe('LoginPage', () => {
     }
   })
 
+  it("shows the server's reason when a new code cannot be sent yet", async () => {
+    await reachCodeScreen()
+    API.post.mockRejectedValueOnce({
+      response: { status: 429, data: { message: 'Please wait a minute before requesting another code' } },
+    })
+
+    fireEvent.click(screen.getByText('Resend code'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Please wait a minute before requesting another code')
+    })
+  })
+
+  it('falls back to a generic message when resending fails without a reason', async () => {
+    await reachCodeScreen()
+    API.post.mockRejectedValueOnce({})
+
+    fireEvent.click(screen.getByText('Resend code'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to resend code, please try again')
+    })
+  })
+
   it('submits registration request with username email and password', async () => {
     API.post.mockResolvedValueOnce({
       data: { token: 'reg-token-123', user: { id: 2, email: 'new@test.com' } }

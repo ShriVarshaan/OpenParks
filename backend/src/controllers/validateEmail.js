@@ -10,15 +10,51 @@ import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import { sendVerification } from "./sendVerification.js";
 
+const COOLDOWN_MESSAGE = {message: "Please wait a minute before requesting another code"}
+
+const needsVerification = async (email) => {
+    const user = await prisma.user.findUnique({where: {email}})
+    return Boolean(user && !user.Verified)
+}
+
+// Same answer whether or not the address has an account, so this can't be used
+// to find out who has signed up.
+export const resendOtp = async (req, res) => {
+    const email = req.body?.email
+    if (typeof email !== "string" || email.trim() === "") {
+        return res.status(400).json({message: "Email is required"})
+    }
+    try {
+        if (await needsVerification(email)) {
+            const sent = await sendVerification(email)
+            if (!sent) {
+                return res.status(429).json(COOLDOWN_MESSAGE)
+            }
+        }
+        return res.status(200).json({message: "If that account needs verifying, a new code has been sent"})
+    } catch (err) {
+        return res.status(500).json({message: "Failed to send OTP"})
+    }
+}
+
 export const checkValidOTP = async(req,res) =>{
     try{
         const OTP = await prisma.oneTimePasswords.findFirst({where: {email: req.body.email, active: true}})
         if(!OTP){
+            // Only accounts still awaiting verification get a new code, so this
+            // endpoint can't be used to email arbitrary addresses.
+            if (!(await needsVerification(req.body.email))) {
+                return res.status(401).json({message: "Invalid One Time Password"})
+            }
             // Awaited: an un-awaited rejection here (e.g. SMTP down) used to crash the server.
+            let sent
             try {
-                await sendVerification(req.body.email)
+                sent = await sendVerification(req.body.email)
             } catch (err) {
                 return res.status(500).json({message: "Could not send a new OTP, try again later"})
+            }
+            if (!sent) {
+                return res.status(429).json(COOLDOWN_MESSAGE)
             }
             return res.status(401).json({message: "No active OTP, new OTP sent"})
         }

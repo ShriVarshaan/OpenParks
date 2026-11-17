@@ -32,3 +32,14 @@ export function parseCorsOrigins(value) {
     .filter(Boolean);
   return origins.length > 0 ? origins : DEFAULT_CORS_ORIGINS;
 }
+
+// Express "trust proxy": unset locally (req.ip is the real client). Behind a host's
+// load balancer set TRUST_PROXY (usually 1) so rate limits see each client's IP
+// instead of the proxy's.
+export function parseTrustProxy(value) {
+  const trimmed = (value ?? "").trim();
+  if (trimmed === "" || trimmed === "false") return false;
+  if (trimmed === "true") return true;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return trimmed;
+}
